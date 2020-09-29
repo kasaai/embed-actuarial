@@ -62,7 +62,35 @@ The predictor variables that we consider here are comprised of two types: contin
 
 ## Categorical data modeling
 
-A categorical variable $X_j, j \in J_{cat}$ takes as its value only one of a finite number of labels. Let the set of labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ is the cardinality or number of levels, in $\mathcal{P}^j$. One-hot encoding maps each value $x_{i,j}$ of $X_j$ to $n_\mathcal{P}^j$ indicator variables, which take a value of $1$ if the label of $x_{i,j}$ corresponds to the level of the indicator variable, and $0$ otherwise. One-hot encoding is often used in the machine learning community while the statistical community often favors dummy coding, which, instead of assigning $n_p^j$ indicator variables, assigns one of the levels of the categories as a baseline, and maps all of the other $n_p^j -1$ variables to indicator variables.
+A categorical variable $X_j, j \in J_{cat}$ takes as its value only one of a finite number of labels. Let the set of labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ is the cardinality or number of levels, in $\mathcal{P}^j$. One-hot encoding maps each value $x_{i,j}$ of $X_j$ to $n_\mathcal{P}^j$ indicator variables, which take a value of $1$ if the label of $x_{i,j}$ corresponds to the level of the indicator variable, and $0$ otherwise. An example of one-hot encoding is shown in Table \ref{tab:onehot}.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
+require(dplyr)
+require(cellar)
+require(recipes)
+require(data.table)
+
+# nfip = cellar_pull("nfip_claims", vintage = NULL)
+# 
+# states = nfip %>% select(state) %>% unique()
+# 
+# states %>% fwrite("manuscript/states.csv")
+
+states= fread("../manuscript/states.csv")
+
+sample_dat = sample_n(states,5) %>% arrange(state)
+
+rec = recipe(~state, data = sample_dat)
+
+dummies <- rec %>% step_dummy(state)
+dummies <- prep(dummies, training = sample_dat)
+
+dummy_data <- bake(dummies, new_data =sample_dat)
+
+cbind(sample_dat, dummy_data) %>% knitr::kable(label = "tab:onehot", caption = "Example one-hot encoding of the state variable")
+```
+
+One-hot encoding is often used in the machine learning community while the statistical community often favors dummy coding, which, instead of assigning $n_p^j$ indicator variables, assigns one of the levels of the categories as a baseline, and maps all of the other $n_p^j -1$ variables to indicator variables.
 
 The approach that we focus on in this study is to use embeddings, which map each level of the categorical data to a low dimensional vector of parameters that is learned together with the rest of the GLM or neural network that is used for the modeling problem. Formally, an embedding is
 
@@ -82,13 +110,19 @@ In this section, we describe, fit, and evaluate both a minimalist neural network
 
 The data we use comes from the National Flood Insurance Program (NFIP) and is made available by the OpenFEMA initiative of the Federal Emergency Management Agency (FEMA) (TODO: cite). Two datasets are made available by OpenFEMA: A policies dataset with exposure information, and a claims dataset with claims transactions, including paid amounts. Because there is no way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While the complete dataset contains over two million transactions, for the purposes of our experiments we limit ourselves to data from 2000 to August 2019, which amounts to approximately 1.4 million claims. The dataset can be downloaded from Cellar (TODO: link). The dataset includes a rich variety of variables, from occupancy type to coarse coordinates. For our models, we work with a few selected variables that represent continuous and discrete variables of low and high cardinalities, which we list in Table \ref{tab:variables}.
 
++------------------------------------------+------------------------------------------+
 | Variable                                 | Type                                     |
-|------------------------------------------|------------------------------------------|
++==========================================+==========================================+
 | Building insurance coverage              | Numeric                                  |
++------------------------------------------+------------------------------------------+
 | Basement enclosure type                  | Categorical                              |
++------------------------------------------+------------------------------------------+
 | Number of floors in the insured building | Categorical (binned in original dataset) |
++------------------------------------------+------------------------------------------+
 | Flood zone                               | Categorical (high cardinality)           |
++------------------------------------------+------------------------------------------+
 | Primary residence                        | Categorical (binary indicator)           |
++------------------------------------------+------------------------------------------+
 
 : \label{tab:variables} Variables used in modeling.
 
