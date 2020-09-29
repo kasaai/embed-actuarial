@@ -56,9 +56,23 @@ $$
 \mathbf{f} : \mathbb{R}^J \mapsto \mathbb{R}^1, \quad \quad \mathbf{x_i} \mapsto  \mathbf f{(\mathbf{x_i})} = y. 
 $$
 
+We will use mainly use GLMs and neural networks to approximate the function $f(.)$.
+
 The predictor variables that we consider here are comprised of two types: continuous variables, taking on numerical values and represented by the matrix $X_{num}$ with $J^{num}$ columns, and categorical variables, which take on discrete values indicating one of several possible categories, represented by the matrix $X_{cat}$ with $J^{cat}$ columns, such that $J^{num} + J^{cat} = J$.
 
-A categorical variable $X_j, j \in J_{cat}$ takes as its value only one of a finite number of labels. Let the set of labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ is the cardinality or number of levels, in $\mathcal{P}^j$. One-hot encoding maps each value $x_{i,j}$ of $X_j$ to $n_\mathcal{P}^j$ indicator variables, which take a value of $1$ if the label of $x_{i,j}$ corresponds to the level of the indicator variable, and $0$ otherwise.
+## Categorical data modeling
+
+A categorical variable $X_j, j \in J_{cat}$ takes as its value only one of a finite number of labels. Let the set of labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ is the cardinality or number of levels, in $\mathcal{P}^j$. One-hot encoding maps each value $x_{i,j}$ of $X_j$ to $n_\mathcal{P}^j$ indicator variables, which take a value of $1$ if the label of $x_{i,j}$ corresponds to the level of the indicator variable, and $0$ otherwise. One-hot encoding is often used in the machine learning community while the statistical community often favors dummy coding, which, instead of assigning $n_p^j$ indicator variables, assigns one of the levels of the categories as a baseline, and maps all of the other $n_p^j -1$ variables to indicator variables.
+
+The approach that we focus on in this study is to use embeddings, which map each level of the categorical data to a low dimensional vector of parameters that is learned together with the rest of the GLM or neural network that is used for the modeling problem. Formally, an embedding is
+
+$$
+z_\mathcal{P^j} : \mathcal{P^j} \to \mathbb{R}^{q_\mathcal{P^j} }, \quad \quad p^j \mapsto  z_\mathcal{P^j}(p),
+$$
+
+where $q_\mathcal{P^j}$ is the dimension of the embedding for the $j$th categorical variable and $z_\mathcal{P^j}(.)$ is an function that maps from the particular element of the labels $p$ to the embedding space. This function is left implicit, meaning to say, we allow the embeddings to be derived during the process of fitting the model and do not attempt to specify exactly how the embeddings can be derived from the input data.
+
+## GLMs and Neural Networks
 
 # A Minimalist Neural Network {#modelling}
 
