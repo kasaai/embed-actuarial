@@ -100,9 +100,7 @@ $$
 
 where $q_\mathcal{P^j}$ is the dimension of the embedding for the $j$th categorical variable and $z_\mathcal{P^j}(.)$ is an function that maps from the particular element of the labels $p$ to the embedding space. This function is left implicit, meaning to say, we allow the embeddings to be derived during the process of fitting the model and do not attempt to specify exactly how the embeddings can be derived from the input data.
 
-## GLMs and Neural Networks
-
-# A Minimalist Neural Network {#modelling}
+## Predictive Modeling with GLM and a Minimalist Neural Network
 
 In this section, we describe, fit, and evaluate both a minimalist neural network architecture utilizing embeddings and a traditional GLM. The working example for our experiments is as follows: Given a set of claims characteristics, we predict the losses paid on the property coverage of the policy. In the rest of this section, we describe the dataset we use, describe formally the models being considered, and discuss results.
 
@@ -110,33 +108,45 @@ In this section, we describe, fit, and evaluate both a minimalist neural network
 
 The data we use comes from the National Flood Insurance Program (NFIP) and is made available by the OpenFEMA initiative of the Federal Emergency Management Agency (FEMA) (TODO: cite). Two datasets are made available by OpenFEMA: A policies dataset with exposure information, and a claims dataset with claims transactions, including paid amounts. Because there is no way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While the complete dataset contains over two million transactions, for the purposes of our experiments we limit ourselves to data from 2000 to August 2019, which amounts to approximately 1.4 million claims. The dataset can be downloaded from Cellar (TODO: link). The dataset includes a rich variety of variables, from occupancy type to coarse coordinates. For our models, we work with a few selected variables that represent continuous and discrete variables of low and high cardinalities, which we list in Table \ref{tab:variables}.
 
-+------------------------------------------+------------------------------------------+
 | Variable                                 | Type                                     |
-+==========================================+==========================================+
+|------------------------------------------|------------------------------------------|
 | Building insurance coverage              | Numeric                                  |
-+------------------------------------------+------------------------------------------+
 | Basement enclosure type                  | Categorical                              |
-+------------------------------------------+------------------------------------------+
 | Number of floors in the insured building | Categorical (binned in original dataset) |
-+------------------------------------------+------------------------------------------+
 | Flood zone                               | Categorical (high cardinality)           |
-+------------------------------------------+------------------------------------------+
 | Primary residence                        | Categorical (binary indicator)           |
-+------------------------------------------+------------------------------------------+
 
 : \label{tab:variables} Variables used in modeling.
 
 ## Severity GLM
 
-asdf
+We fit a GLM with the following specifications:
 
-## Neural net
+-   Target variable: Amount paid on building claim
 
-asdf
+-   Predictors: *Log* of **building insurance coverage**, **basement enclosure type**, **number of floors in the insured building**, *prefix* of **flood zone**, and ***primary residence***.
+
+-   Link function: log
+
+-   Distribution: gamma
+
+We take the log of the continuous predictor **building insurance coverage** following (cite cas glm monograph), which allows the scale of the predictor to match that of the target variable. Because the **flood zone** variable in the original data contains 60 levels, we take the prefix of the zone code, which corresponds to the level of risk as determined by FEMA (source?). For example, *A01*, *A02*, and so on are recoded as simply *A*.
+
+A log link together with the gamma distribution is a standard choice for severity modeling, which provides a multiplicative structure where the response is positive.
+
+## A Simple Neural Network
+
+(Note: this section is WIP doesn't match up w/ code, which is also WIP) For the neural net, we utilize the same responsible variable, amount paid on building claim. We normalize the numeric variable ***building insurance coverage***, one-hot encode the **primary residence** variable, and apply embedding layers of dimension one to the rest of the categorical variables. We then connect the embeddings and the normalized variable to a single output unit with softplus activation, where the softplus function is defined to be
+
+\begin{equation}
+x \mapsto \log(1 + e^x).
+\end{equation}
+
+Figure (todo: add figure) exhibits the architecture of our simple neural network.
 
 ## Performance evaluation framework and results
 
-asdf
+To evaluate these baseline models and other models in this paper, we perform 10-fold cross validation and compare the root mean square error (RMSE) on the predicted and actual paid amounts. 
 
 # Interpretations {#interpretation}
 
