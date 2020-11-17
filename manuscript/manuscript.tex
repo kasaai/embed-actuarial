@@ -133,16 +133,17 @@ The rest of this manuscript is organized as follows. Section
 \ref{lit_review} reviews recent applications of embeddings in the
 actuarial literature. Section \ref{defns} provides the notation used in
 the paper and defines GLMs, neural networks and related modelling
-concepts. In Section \ref{modelling}, we provide initial models for the
-NFIP dataset and consider the influence of hyperparameter choices on the
-results of the neural network model. Section \ref{tl} considers how
-successfully the embeddings used in the neural network model can be
-transferred to a GLM model of the same data. Extensions to the modelling
-approach are considered in Section \ref{extend} and we focus on
-attention based models in Section \ref{attention}. The interpretability
-of embedding layers is addressed in Section \ref{interpretation}.
-Finally, Section \ref{Conclusions} provides a discussion of the results
-of this paper and considers avenues for future research.
+concepts, including embeddings and attention. In Section
+\ref{modelling}, we provide initial models for the NFIP dataset and
+consider the influence of hyperparameter choices on the results of the
+neural network model. Section \ref{tl} considers how successfully the
+embeddings used in the neural network model can be transferred to a GLM
+model of the same data. Extensions to the modelling approach are
+considered in Section \ref{extend} and we focus on attention based
+models in Section \ref{attention}. The interpretability of embedding
+layers is addressed in Section \ref{interpretation}. Finally, Section
+\ref{Conclusions} provides a discussion of the results of this paper and
+considers avenues for future research.
 
 (TODO: link to github repo)
 
@@ -244,8 +245,8 @@ that map from the predictor variables \(\mathbf{x}_i\) to the outcome
 \mathbf{f} : \mathbb{R}^J \mapsto \mathbb{R}^1, \quad \quad \mathbf{x_i} \mapsto  \mathbf f{(\mathbf{x_i})} = y. 
 \]
 
-We will use mainly use GLMs and neural networks to approximate the
-function \(f(.)\).
+In this study, will use mainly use GLMs and neural networks to
+approximate the function \(f(.)\).
 
 The predictor variables that we consider here are comprised of two
 types: continuous variables, taking on numerical values and represented
@@ -265,23 +266,25 @@ of levels, in \(\mathcal{P}^j\). One-hot encoding maps each value
 \(x_{i,j}\) of \(X_j\) to \(n_\mathcal{P}^j\) indicator variables, which
 take a value of \(1\) if the label of \(x_{i,j}\) corresponds to the
 level of the indicator variable, and \(0\) otherwise. An example of
-one-hot encoding is shown in Table \ref{tab:onehot}.
+one-hot encoding is shown in Table \ref{onehot}.
 
-\begin{longtable}[]{@{}lrrrr@{}}
+\begin{longtable}[]{@{}lrrrrr@{}}
 \caption{Example one-hot encoding of the state variable}\tabularnewline
 \toprule
-state & state\_KS & state\_OK & state\_UT & state\_WA\tabularnewline
+state & state\_CA & state\_MD & state\_ND & state\_UT &
+state\_WA\tabularnewline
 \midrule
 \endfirsthead
 \toprule
-state & state\_KS & state\_OK & state\_UT & state\_WA\tabularnewline
+state & state\_CA & state\_MD & state\_ND & state\_UT &
+state\_WA\tabularnewline
 \midrule
 \endhead
-CO & 0 & 0 & 0 & 0\tabularnewline
-KS & 1 & 0 & 0 & 0\tabularnewline
-OK & 0 & 1 & 0 & 0\tabularnewline
-UT & 0 & 0 & 1 & 0\tabularnewline
-WA & 0 & 0 & 0 & 1\tabularnewline
+CA & 1 & 0 & 0 & 0 & 0\tabularnewline
+MD & 0 & 1 & 0 & 0 & 0\tabularnewline
+ND & 0 & 0 & 1 & 0 & 0\tabularnewline
+UT & 0 & 0 & 0 & 1 & 0\tabularnewline
+WA & 0 & 0 & 0 & 0 & 1\tabularnewline
 \bottomrule
 \end{longtable}
 
@@ -289,12 +292,133 @@ One-hot encoding is often used in the machine learning community while
 the statistical community often favors dummy coding, which, instead of
 assigning \(n_p^j\) indicator variables, assigns one of the levels of
 the categories as a baseline, and maps all of the other \(n_p^j -1\)
-variables to indicator variables.
+variables to indicator variables. An example of dummy encoding is shown
+in Table \ref{dummy}.
 
-The approach that we focus on in this study is to use embeddings, which
-map each level of the categorical data to a low dimensional vector of
-parameters that is learned together with the rest of the GLM or neural
-network that is used for the modeling problem. Formally, an embedding is
+\begin{longtable}[]{@{}lrrrr@{}}
+\caption{Example dummy encoding of the state variable}\tabularnewline
+\toprule
+state & state\_MD & state\_ND & state\_UT & state\_WA\tabularnewline
+\midrule
+\endfirsthead
+\toprule
+state & state\_MD & state\_ND & state\_UT & state\_WA\tabularnewline
+\midrule
+\endhead
+CA & 0 & 0 & 0 & 0\tabularnewline
+MD & 1 & 0 & 0 & 0\tabularnewline
+ND & 0 & 1 & 0 & 0\tabularnewline
+UT & 0 & 0 & 1 & 0\tabularnewline
+WA & 0 & 0 & 0 & 1\tabularnewline
+\bottomrule
+\end{longtable}
+
+After encoding the categorical data in this manner, most regression
+models such as GLMs will then fit coefficients for each level of the
+category in the table (if a tree based model is used, such as decision
+tree, then splits in the tree may occur depending on the presence, or
+not, of the categorical variable for the data). If one-hot encoding has
+been used, \(n_\mathcal{P}^j\) coefficients will be fit, compared to
+\(n_\mathcal{P}^j - 1\) coefficients in the case of dummy coding.
+
+These coefficients represent the effect that each level of the
+categorical variable will have on the outcome. In the case that there
+are no other variables available in the dataset, then the coefficients
+will reflect the average value of the outcomes for that level of the
+categorical variable. For example, suppose that the categorical variable
+is a policyholder identifier, and the outcomes are the value of claims
+in different years, then the coefficients will reflect the average
+annual claims for each policyholder based on the experience. In other
+words, both of these encoding schemes give full credibility to the data
+available for each category, thus, even if a relatively small amount of
+data is available for a specific policyholder, the coefficient that is
+calibrated will only reflect that data. On the other hand, a
+foundational technique within actuarial work is the application of
+credibility methods, which are used for experience rating and other
+applications. These techniques provide an estimate that reflects not
+only the experience of the individual policyholder but also that of the
+collective, based on an estimate of how credible the data for each
+individual is. While we have described the application of credibility in
+a simple univariate context, it is also possible to apply credibility
+considerations within GLMs. using models known as Generalized Linear
+Mixed Models or GLMMs, and we refer to (Klinker 2010) for more details.
+
+Having described traditional approaches for modeling categorical data,
+we now turn to neural networks, and discuss embedding layers for
+categorical data modeling, which we define in more detail in the section
+on neural networks.
+
+\hypertarget{neural-networks}{%
+\subsection{Neural Networks}\label{neural-networks}}
+
+Neural networks are flexible machine learning models that have recently
+been applied to a number of problems with Property and Casualty (P\&C)
+insurance. Here, we provide a brief overview of these models, and refer
+the reader to (Richman 2018) for a more detailed overview. Neural
+networks are characterized by multiple layers of non-linear regression
+functions that are used to learn a new representation of the data input
+to the network that is then used to make predictions. Here we focus on
+the most common type of neural networks, which are fully connected
+networks (FCNs), which provide as the output of each set of non-linear
+functions to the subsequent layer of functions. Formally, a \(K\)-layer
+neural network is:
+
+\begin{equation} 
+\label{NN}
+\begin{split}
+z^1 &= \sigma(a_1.X+ b_1) \\
+z^2 &= \sigma(a_2.z^1+ b_2) \\
+\vdots \\
+z^K &= \sigma(a_{K}.z^{K-1}+ b_{K}) \\
+\hat{y} &= \sigma(a_{K+1}.z^{K}+ b_{K+1}),
+\end{split}
+\end{equation}
+
+where the regression parameters (weights) for each layer \[k \in [1;K]\]
+are represented by the matrices \(a_k\) and the intercept terms are
+represented by \(b_k\). Whereas the calculation inside each of the
+layers is nothing more than linear regression, \(\sigma\) represents the
+non-linear part of each layer. Choices for \(\sigma\) are often the tanh
+function or the rectified linear unit (ReLu) \(max(0,x)\). The
+parameters of the network are estimated (`trained') as follows. First a
+loss function \(L(.,.)\) is specified for the network that measures the
+difference between the observed data \(y\) and the predictions of the
+network \(\hat{y}\), for example, the Mean Squared Error
+(\((y - \hat{y})^2\)). Then, the parameters of the network are changed
+such that the loss decreases (formally, this is done using the technique
+of backpropagation).Finally, training is stopped once the predictive
+performance of the network on unseen data is suitably good.
+
+If \(K\) is set equal to \(1\), then Equation \ref{NN} reduced to
+nothing more than a GLM. A neural network with \(K=2\) is called a
+shallow neural network and for \(K \geq 2\), the network is called a
+deep neural network. The matrix \(X\) of data input to the network can
+be composed of both continuous variables as well as categorical
+variables, which can be pre-processed using one-hot or dummy encoding.
+As mentioned above, a different option is to use encodings, which we
+discuss in more detail next.
+
+\hypertarget{embeddings}{%
+\subsubsection{Embeddings}\label{embeddings}}
+
+Common issues with the traditional encoding schemes for categorical data
+occur when the number of levels for each variable is very large. Often,
+in these cases, models do not converge quickly, and the very large
+matrices that result from applying these schemes often cause
+computational difficulties. Besides for these practical issues, a deeper
+issue is that one-hot or dummy encoded data assumes that each category
+is entirely independent of the rest of the categories, in other words,
+there are no similarities between categories that could enable more
+robust estimation of models. In technical terms, this is because the
+columns of the matrices created by one-hot encoding are all orthogonal
+to each other. (These arguments appear in a similar form in (Guo and
+Berkhahn 2016).) Solutions to these problems are provided by embedding
+layers.
+
+An embedding layer is a neural network component which maps each level
+of the categorical data to a low dimensional vector of parameters that
+is learned together with the rest of the GLM or neural network that is
+used for the modeling problem. Formally, an embedding is
 
 \[
 z_\mathcal{P^j} : \mathcal{P^j} \to \mathbb{R}^{q_\mathcal{P^j} }, \quad \quad p^j \mapsto  z_\mathcal{P^j}(p),
@@ -303,16 +427,44 @@ z_\mathcal{P^j} : \mathcal{P^j} \to \mathbb{R}^{q_\mathcal{P^j} }, \quad \quad p
 where \(q_\mathcal{P^j}\) is the dimension of the embedding for the
 \(j\)th categorical variable and \(z_\mathcal{P^j}(.)\) is an function
 that maps from the particular element of the labels \(p\) to the
-embedding space. This function is left implicit, meaning to say, we
-allow the embeddings to be derived during the process of fitting the
-model and do not attempt to specify exactly how the embeddings can be
-derived from the input data.
+embedding space. Equation \ref{eq:embedding} states that an embedding
+maps a level of a categrical variable to a numerical vector. This
+function is left implicit, meaning to say, we allow the embeddings to be
+derived during the process of fitting the model and do not attempt to
+specify exactly how the embeddings can be derived from the input data.
+In Table \ref{embed} we show an example of two dimensional embeddings
+for the state variables, where these have been generated randomly.
 
-\hypertarget{glms-and-neural-networks}{%
-\subsection{GLMs and Neural Networks}\label{glms-and-neural-networks}}
+\begin{longtable}[]{@{}lrr@{}}
+\caption{Example (random) embeddings of the state
+variable}\tabularnewline
+\toprule
+state & dimension1 & dimension2\tabularnewline
+\midrule
+\endfirsthead
+\toprule
+state & dimension1 & dimension2\tabularnewline
+\midrule
+\endhead
+CO & 1.5115220 & 2.2866454\tabularnewline
+DC & -0.0946590 & -1.3888607\tabularnewline
+ME & 2.0184237 & -0.2787888\tabularnewline
+PA & -0.0627141 & -0.1333213\tabularnewline
+UT & 1.3048697 & 0.6359504\tabularnewline
+\bottomrule
+\end{longtable}
 
-\hypertarget{modelling}{%
-\section{A Minimalist Neural Network}\label{modelling}}
+When applying embeddings in a data modeling context using neural
+networks, the values of the embeddings will be calibrated during the
+same fitting process that calibrates the parameters of the neural
+network.
+
+\hypertarget{attention}{%
+\subsubsection{Attention}\label{attention}}
+
+\hypertarget{predictive-modeling-with-glm-and-a-minimalist-neural-network}{%
+\section{Predictive Modeling with GLM and a Minimalist Neural
+Network}\label{predictive-modeling-with-glm-and-a-minimalist-neural-network}}
 
 In this section, we describe, fit, and evaluate both a minimalist neural
 network architecture utilizing embeddings and a traditional GLM. The
@@ -390,18 +542,59 @@ Categorical (binary indicator)\strut
 \hypertarget{severity-glm}{%
 \subsection{Severity GLM}\label{severity-glm}}
 
-asdf
+We fit a GLM with the following specifications:
 
-\hypertarget{neural-net}{%
-\subsection{Neural net}\label{neural-net}}
+\begin{itemize}
+\item
+  Target variable: Amount paid on building claim
+\item
+  Predictors: \emph{Log} of \textbf{building insurance coverage},
+  \textbf{basement enclosure type}, \textbf{number of floors in the
+  insured building}, \emph{prefix} of \textbf{flood zone}, and
+  \textbf{\emph{primary residence}}.
+\item
+  Link function: log
+\item
+  Distribution: gamma
+\end{itemize}
 
-asdf
+We take the log of the continuous predictor \textbf{building insurance
+coverage} following (cite cas glm monograph), which allows the scale of
+the predictor to match that of the target variable. Because the
+\textbf{flood zone} variable in the original data contains 60 levels, we
+take the prefix of the zone code, which corresponds to the level of risk
+as determined by FEMA (source?). For example, \emph{A01}, \emph{A02},
+and so on are recoded as simply \emph{A}.
+
+A log link together with the gamma distribution is a standard choice for
+severity modeling, which provides a multiplicative structure where the
+response is positive.
+
+\hypertarget{a-simple-neural-network}{%
+\subsection{A Simple Neural Network}\label{a-simple-neural-network}}
+
+(Note: this section is WIP doesn't match up w/ code, which is also WIP)
+For the neural net, we utilize the same responsible variable, amount
+paid on building claim. We normalize the numeric variable
+\textbf{\emph{building insurance coverage}}, one-hot encode the
+\textbf{primary residence} variable, and apply embedding layers of
+dimension one to the rest of the categorical variables. We then connect
+the embeddings and the normalized variable to a single output unit with
+softplus activation, where the softplus function is defined to be
+
+\textbackslash begin\{equation\} x \textbackslash mapsto
+\textbackslash log(1 + e\^{}x). \textbackslash end\{equation\}
+
+Figure (todo: add figure) exhibits the architecture of our simple neural
+network.
 
 \hypertarget{performance-evaluation-framework-and-results}{%
 \subsection{Performance evaluation framework and
 results}\label{performance-evaluation-framework-and-results}}
 
-asdf
+To evaluate these baseline models and other models in this paper, we
+perform 10-fold cross validation and compare the root mean square error
+(RMSE) on the predicted and actual paid amounts.
 
 \hypertarget{interpretation}{%
 \section{Interpretations}\label{interpretation}}
@@ -430,8 +623,8 @@ groups smoothness Map numeric to a dense layer and use that as embedding
 credibility theory lead to enhanced embeddings? Take credibility mixture
 over embeddings Cluster embeddings PCA of embeddings
 
-\hypertarget{attention}{%
-\section{Attention based modelling}\label{attention}}
+\hypertarget{attention-based-modelling}{%
+\section{Attention based modelling}\label{attention-based-modelling}}
 
 Can we get some lift by adding attention layers? TabNet model
 Transformer model
