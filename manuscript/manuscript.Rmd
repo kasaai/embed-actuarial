@@ -398,10 +398,16 @@ Figure \@ref(fig:nn-1) exhibits the architecture of our simple neural network.
 knitr::include_graphics("images/nn.png")
 ```
 
+(maybe include a second nn with actual hidden layers?)
+
 ## Performance evaluation framework and results
 
-To evaluate these baseline models and other models in this paper, we perform 10-fold cross validation and compare the 
+To evaluate these baseline models and other models in this paper, we perform 10-fold 
+cross validation and compare the 
 root mean square error (RMSE) on the predicted and actual paid amounts.
+(somehwere we should say we're not doing a kaggle competition here and the performance metrics are really meant
+to show that the models aren't complete shit)
+(maybe a couple boxplots showing metrics for baseline models)
 
 # Interpretations {#interpretation}
 
@@ -424,6 +430,13 @@ embedding - basis expansion Add a distribution to the embeddings Can insights fr
 # Attention based modelling
 
 Can we get some lift by adding attention layers? TabNet model Transformer model
+
+Description of tabnet, talk about how it's related to embeddings, show some plots 
+like \@ref(fig:masks) etc.
+
+```{r masks, echo = FALSE, fig.cap = "blahblah", out.width = "100%", fig.align = "center"}
+knitr::include_graphics("images/masks.png")
+```
 
 # Conclusions {#Conclusions}
 
