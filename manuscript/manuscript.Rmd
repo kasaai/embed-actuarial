@@ -411,14 +411,19 @@ to show that the models aren't complete shit)
 
 # Interpretations {#interpretation}
 
-Extracting and interpreting trained embeddings, including visualization techniques Can we explain the learned 
-embeddings using a GLM? distance to water etc Rainfall Density Distance to coast
+- model explainability is important in insurance
+- the more we can learn about how we arrive at our models the better
+- cite some existing work on explainable models in actuarial literature to show people care
+- refer back to some definitions from previous sections
+- show some embedding weights from our models - 1d line plot
+- (need a multidimensional embedding for this) do some pca/tsne
+- stress that relationship of embedding weights to response variable may be nonlinear depending on architecture
 
 # Transfer Learning {#tl}
 
-How can embedding layers be used in GLM models? (Potential uses of embedding layers as a feature engineering technique 
-for GLM) Transfer learned embeddings to GLM - backprop on NN and use as preprocessing Train GLM on embedding layers - 
-backprop on 1 layer NN
+- get weights from NN and use in place of categorical variables in GLM?
+- train GLM using backprop w/ embedding layer (OK maybe this ought to be absorbed in the modeling section and we add this as a separate model?)
+
 
 # Extending the model {#extend}
 
