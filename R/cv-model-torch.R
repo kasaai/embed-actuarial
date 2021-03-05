@@ -15,14 +15,13 @@ categorical_cols <- c(
 numeric_cols <- c("total_building_insurance_coverage", "community_rating_system_discount")
 response_col <- "amount_paid_on_building_claim"
 
-env <- new.env()
 
 cvfolds <- small_data %>%
     rsample::vfold_cv(v = 2)
 cvfolds
 
-
 model_analyze_assess <- function(splits, ...) {
+    env <- new.env()
     analysis_data <- analysis(splits)
     assessment_data <- assessment(splits)
 
@@ -31,12 +30,14 @@ model_analyze_assess <- function(splits, ...) {
             select(-loss_proportion, -reported_zip_code)
     ) %>%
         step_normalize(all_numeric(), -all_outcomes()) %>%
+        step_novel(all_nominal()) %>%
         step_unknown(all_nominal()) %>%
         step_integer(all_nominal(), strict = TRUE, zero_based = TRUE) %>%
-        prep()
+        prep(strings_as_factors = FALSE)
 
     ds <- flood_dataset(juice(rec), categorical_cols, numeric_cols, response_col, env)
-    test_ds <- flood_dataset(bake(rec, assessment_data), categorical_cols, numeric_cols)
+    baked_test_data <- bake(rec, assessment_data)
+    test_ds <- flood_dataset(baked_test_data, categorical_cols, numeric_cols)
     train_indx <- sample(length(ds), 0.8 * length(ds))
     valid_indx <- seq_len(length(ds)) %>% setdiff(train_indx)
     train_ds <- dataset_subset(ds, train_indx)
@@ -68,7 +69,7 @@ model_analyze_assess <- function(splits, ...) {
             flood_zone, primary_residence
         ) %>%
         step_log(total_building_insurance_coverage) %>%
-        prep()
+        prep(strings_as_factors = FALSE)
 
     model_glm <- glm(form,
         family = Gamma(link = log), data = juice(rec),
@@ -93,7 +94,7 @@ cv_results <- cvfolds$splits %>%
 cv_results %>%
     map(function(x) {
         list(
-            #  rmse_nn = sqrt(sum((x$actuals - x$preds_nn)^2) / length(x$actuals)),
+            rmse_nn = sqrt(sum((x$actuals - x$preds_nn)^2) / length(x$actuals)),
             rmse_glm = sqrt(sum((x$actuals - x$preds_glm)^2) / length(x$actuals))
         )
     })
