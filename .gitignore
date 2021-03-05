@@ -4,3 +4,7 @@
 .Ruserdata
 **/.DS_Store
 data/
+manuscript/manuscript.log
+manuscript/manuscript.tex
+internal
+data
