@@ -39,13 +39,13 @@ flood_dataset <- dataset(
 )
 
 embedding_module <- nn_module(
-    initialize = function(cardinalities, fn_embedding_dim) {
+    initialize = function(cardinalities, fn_embedding_dim, max_norm = NULL, norm_type = 2) {
         self$embeddings <- nn_module_list(lapply(
             cardinalities,
             function(x) {
                 nn_embedding(
                     num_embeddings = x, embedding_dim = fn_embedding_dim(x),
-                    max_norm = 10, norm_type = 2
+                    max_norm = max_norm, norm_type = norm_type
                 )
             }
         ))
