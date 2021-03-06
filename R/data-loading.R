@@ -13,4 +13,5 @@ small_data <- claims %>%
         condominium_indicator, number_of_floors_in_the_insured_building, occupancy_type,
         community_rating_system_discount, flood_zone
     ) %>%
+    filter(across(everything(), ~!is.na(.x))) %>% 
     mutate(loss_proportion = pmin(amount_paid_on_building_claim / total_building_insurance_coverage, 1))
