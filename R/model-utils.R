@@ -7,7 +7,7 @@ flood_dataset <- dataset(
             `+`(1L) %>%
             torch_tensor()
         if (!is.null(env)) {
-            assign("cardinalities", sapply(df[categorical_cols], function(x) max(x) + 2), envir = env)
+            assign("cardinalities", sapply(df[categorical_cols], function(x) max(x) + 3), envir = env)
         }
         self$xnum <- df[numeric_cols] %>%
             as.matrix() %>%
@@ -59,7 +59,7 @@ embedding_module <- nn_module(
     }
 )
 
-net <- nn_module(
+trivial_net <- nn_module(
     "baseline_net",
     initialize = function(cardinalities,
                           num_numerical,
@@ -76,6 +76,29 @@ net <- nn_module(
             self$output() %>%
             nnf_softplus()
     }
+)
+
+simple_net <- nn_module(
+    "mlp",
+    initialize = function(cardinalities,
+                          num_numerical,
+                          units = 64,
+                          fn_embedding_dim = function(x) ceiling(x / 2)) {
+        self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
+        sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
+            sum()
+        self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
+        self$output <- nn_linear(units, 1)
+    },
+    forward = function(xcat, xnum) {
+        embedded <- self$embedder(xcat)
+        all <- torch_cat(list(embedded, xnum$to(dtype = torch_float())), dim = 2)
+        all %>%
+            self$fc()  %>% 
+            nnf_relu() %>% 
+            self$output() %>%
+            nnf_softplus()
+    } 
 )
 
 train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
