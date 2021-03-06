@@ -20,7 +20,7 @@ cvfolds <- small_data %>%
     rsample::vfold_cv(v = 2)
 cvfolds
 
-model_analyze_assess <- function(splits, ...) {
+model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
     analysis_data <- analysis(splits)
     assessment_data <- assessment(splits)
@@ -31,9 +31,9 @@ model_analyze_assess <- function(splits, ...) {
     ) %>%
         step_normalize(all_numeric(), -all_outcomes()) %>%
         step_novel(all_nominal()) %>%
-        step_unknown(all_nominal()) %>%
+        # step_unknown(all_nominal(), new_level = "missing") %>%
         step_integer(all_nominal(), strict = TRUE, zero_based = TRUE) %>%
-        prep(strings_as_factors = FALSE)
+        prep(strings_as_factors = TRUE)
 
     ds <- flood_dataset(juice(rec), categorical_cols, numeric_cols, response_col, env)
     baked_test_data <- bake(rec, assessment_data)
@@ -42,17 +42,16 @@ model_analyze_assess <- function(splits, ...) {
     valid_indx <- seq_len(length(ds)) %>% setdiff(train_indx)
     train_ds <- dataset_subset(ds, train_indx)
     valid_ds <- dataset_subset(ds, valid_indx)
-    model <- net(env$cardinalities, length(numeric_cols), function(x) 2)
 
-    train_dl <- train_ds %>% dataloader(batch_size = 1024, shuffle = TRUE)
-    valid_dl <- valid_ds %>% dataloader(batch_size = 1024, shuffle = TRUE)
-    test_dl <- test_ds %>% dataloader(batch_size = 1024, shuffle = FALSE)
+    train_dl <- train_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
+    valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
+    test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 
-    model <- net(env$cardinalities, length(numeric_cols), function(x) 2)
+    model <- trivial_net(env$cardinalities, length(numeric_cols), function(x) 1)
 
-    optimizer <- optim_adam(model$parameters, lr = 0.1)
+    optimizer <- optim_adam(model$parameters, lr = learning_rate)
 
-    train_loop(model, train_dl, valid_dl, 2, optimizer)
+    train_loop(model, train_dl, valid_dl, epochs, optimizer)
 
     preds_nn <- get_preds(model, test_dl)
 
@@ -64,10 +63,8 @@ model_analyze_assess <- function(splits, ...) {
         data = analysis_data
     ) %>%
         step_mutate(flood_zone = substr(flood_zone, 1, 1)) %>%
-        step_unknown(
-            occupancy_type, number_of_floors_in_the_insured_building,
-            flood_zone, primary_residence
-        ) %>%
+        step_novel(all_nominal()) %>%
+        # step_unknown(all_nominal(), new_level = "missing") %>%
         step_log(total_building_insurance_coverage) %>%
         prep(strings_as_factors = FALSE)
 
@@ -82,6 +79,8 @@ model_analyze_assess <- function(splits, ...) {
         pull(amount_paid_on_building_claim)
 
     list(
+        model_nn = model,
+        model_glm = model_glm,
         actuals = actuals,
         preds_nn = preds_nn,
         preds_glm = preds_glm
@@ -89,7 +88,7 @@ model_analyze_assess <- function(splits, ...) {
 }
 
 cv_results <- cvfolds$splits %>%
-    map(model_analyze_assess)
+    lapply(function(x) model_analyze_assess(x, 0.01, 50, 10000))
 
 cv_results %>%
     map(function(x) {
