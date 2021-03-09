@@ -8,7 +8,7 @@ source("R/data-loading.R")
 
 categorical_cols <- c(
     "primary_residence", "basement_enclosure_crawlspace_type",
-    "condominium_indicator", "number_of_floors_in_the_insured_building",
+    "number_of_floors_in_the_insured_building",
     "occupancy_type", "flood_zone"
 )
 
@@ -17,8 +17,8 @@ response_col <- "amount_paid_on_building_claim"
 
 
 cvfolds <- small_data %>%
-    rsample::vfold_cv(v = 2)
-cvfolds
+    rsample::vfold_cv(v = 5)
+# cvfolds
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
@@ -72,7 +72,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
-        occupancy_type + flood_zone + primary_residence + condominium_indicator + community_rating_system_discount
+        occupancy_type + flood_zone + primary_residence + community_rating_system_discount
 
     rec_glm <- recipe(form,
         data = analysis_data
@@ -127,7 +127,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 }
 
 cv_results <- cvfolds$splits %>%
-    lapply(function(x) model_analyze_assess(x, 0.1, 20, 1100))
+    lapply(function(x) model_analyze_assess(x, 0.01, 1, 1100))
 
 cv_results %>%
     map(function(x) {

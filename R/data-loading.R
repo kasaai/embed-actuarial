@@ -10,7 +10,8 @@ small_data <- claims %>%
     select(
         amount_paid_on_building_claim, total_building_insurance_coverage,
         reported_zip_code, primary_residence, basement_enclosure_crawlspace_type,
-        condominium_indicator, number_of_floors_in_the_insured_building, occupancy_type,
+        # condominium_indicator, 
+        number_of_floors_in_the_insured_building, occupancy_type,
         community_rating_system_discount, flood_zone
     ) %>%
     filter(across(everything(), ~!is.na(.x))) %>% 
