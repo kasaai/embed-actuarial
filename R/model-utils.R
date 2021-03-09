@@ -75,7 +75,7 @@ trivial_net <- nn_module(
         all %>%
             self$output() %>%
             torch_exp()
-            # nnf_softplus()
+        # nnf_softplus()
     }
 )
 
@@ -95,11 +95,11 @@ simple_net <- nn_module(
         embedded <- self$embedder(xcat)
         all <- torch_cat(list(embedded, xnum$to(dtype = torch_float())), dim = 2)
         all %>%
-            self$fc()  %>% 
-            nnf_relu() %>% 
+            self$fc() %>%
+            nnf_relu() %>%
             self$output() %>%
             nnf_softplus()
-    } 
+    }
 )
 
 train_loop_alternate <- function(model, train_dl, valid_dl, epochs, optimizer) {
@@ -146,7 +146,7 @@ train_loop_alternate <- function(model, train_dl, valid_dl, epochs, optimizer) {
             "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
             mean(train_losses), mean(valid_losses)
         ))
-    }    
+    }
 }
 
 train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
@@ -202,12 +202,12 @@ replace_unseen_level_weights_ <- function(embeddings) {
 
 map_cats_to_embeddings <- function(data, keys) {
     for (v in names(keys)) {
-        mapping_table <- keys[[v]] %>% 
+        mapping_table <- keys[[v]] %>%
             select(value, embedding) %>%
             rename(!!v := value)
         data <- data %>%
-            left_join(mapping_table, by = v) %>% 
-            select(-!!v) %>% 
+            left_join(mapping_table, by = v) %>%
+            select(-!!v) %>%
             rename(!!v := embedding)
     }
 
@@ -215,18 +215,19 @@ map_cats_to_embeddings <- function(data, keys) {
 }
 
 key_with_embeddings <- function(embeddings, key) {
-    Map(function(embedder, key) {
-    # key$integer
-    embedding <- key$integer %>% 
-      `+`(1L)  %>% 
-      torch_tensor(dtype = torch_int()) %>% 
-      embedder() %>% 
-      as.numeric()
-    key[["embedding"]] <- embedding
-    key
-},
-    as.list(embeddings),
-    key
-) %>% 
-    setNames(names(key))
+    Map(
+        function(embedder, key) {
+            # key$integer
+            embedding <- key$integer %>%
+                `+`(1L) %>%
+                torch_tensor(dtype = torch_int()) %>%
+                embedder() %>%
+                as.numeric()
+            key[["embedding"]] <- embedding
+            key
+        },
+        as.list(embeddings),
+        key
+    ) %>%
+        setNames(names(key))
 }
