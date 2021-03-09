@@ -311,15 +311,18 @@ calibrated during the same fitting process that calibrates the parameters of the
 
 ### Attention {#attention}
 
-# Predictive Modeling with GLM and a Minimalist Neural Network
+# Predictive Modeling with Embeddings
 
-In this section, we describe, fit, and evaluate both a GLM and a minimalist neural network architecture utilizing
-embeddings. While this paper focuses on embeddings in neural networks, we begin with a GLM to provide a common frame of 
-reference since most actuaries are familiar with the technique. The working example for our experiments is as follows: 
-Given a set of claims characteristics, we predict the losses paid on the property coverage of the policy. In the rest of 
-this section, we describe the dataset we use, describe formally the models being considered, and discuss results.
+In this section, we walk through a simple predictive modeling exercise in order to illustrate the application of 
+embeddings. First, we pose a supervised regression problem, based on flood insurance claims severity. We then describe, 
+fit, and evaluate GLMs and neural networks utilizing embeddings for this problem. Finally, we discuss visualization 
+techniques for model interpretation. As we proceed, we also incorporate practical technical guidance on modeling
+procedure.
 
-## NFIP data
+## Problem Description and Data
+
+The working example for our experiments is as follows: Given a set of claim characteristics, we predict the losses paid 
+on the property coverage of the policy.
 
 The data we use comes from the National Flood Insurance Program (NFIP) and is made available by the OpenFEMA initiative 
 of the Federal Emergency Management Agency (FEMA)[^9]. Two datasets are made available by OpenFEMA: A policies dataset 
@@ -334,7 +337,7 @@ which we list in Table \@ref(tab:variables)
 [^9]: https://www.fema.gov/about/reports-and-data/openfema
 [^10]: https://cellar.kasa.ai 
 
-```{r variables, results='asis', echo = FALSE}
+```{r variables, results='asis', message=FALSE, echo = FALSE}
 library(magrittr)
 variables <- tibble::tribble(
   ~Variable, ~Type,
@@ -355,8 +358,17 @@ knitr::kable(
   kableExtra::kable_styling(latex_options = "hold_position")
 ```
 
-## Severity GLM
+## Models
 
+1. A GLM with gamma distribution and log link function
+2. A linear model with categorical embeddings and an exponential output activation
+3. A GLM with the categorical predictors replaced by the trained embeddings from Model 2.
+4. A multilayer perceptron regression model
+
+### Model 1: Simple GLM 
+
+While this paper focuses on embeddings in neural networks, we begin with a GLM to provide a common frame of 
+reference since most actuaries are familiar with the technique. 
 While GLMs are commonplace and well-studied in the actuarial literature, there are still plenty of decisions to be made
 in the modeling process; see, for example, @Goldburd for an in-depth discussion. For our purpose of establishing a
 baseline model, we proceed with what we perceive as reasonable decisions around feature engineering and model structure, outlined below:
@@ -376,7 +388,7 @@ the prefix of the zone code, which corresponds to the level of risk as determine
 A log link together with the gamma distribution is a standard choice for severity modeling, which provides a 
 multiplicative structure where the response is positive.
 
-## A Simple Neural Network
+### Model 2: Linear Model with Embeddings
 
 For the neural net, we utilize the same response variable, amount paid on building claim. We perform the following 
 transformations on the predictor variables:
@@ -409,7 +421,7 @@ root mean square error (RMSE) on the predicted and actual paid amounts.
 to show that the models aren't complete shit)
 (maybe a couple boxplots showing metrics for baseline models)
 
-# Interpretations {#interpretation}
+## Interpretations {#interpretation}
 
 - model explainability is important in insurance
 - the more we can learn about how we arrive at our models the better
@@ -418,12 +430,6 @@ to show that the models aren't complete shit)
 - show some embedding weights from our models - 1d line plot
 - (need a multidimensional embedding for this) do some pca/tsne
 - stress that relationship of embedding weights to response variable may be nonlinear depending on architecture
-
-# Transfer Learning {#tl}
-
-- get weights from NN and use in place of categorical variables in GLM?
-- train GLM using backprop w/ embedding layer (OK maybe this ought to be absorbed in the modeling section and we add this as a separate model?)
-
 
 # Extending the model {#extend}
 
