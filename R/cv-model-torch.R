@@ -7,7 +7,7 @@ source("R/model-utils.R")
 source("R/data-loading.R")
 
 categorical_cols <- c(
-    "state", "primary_residence", "basement_enclosure_crawlspace_type",
+    "primary_residence", "basement_enclosure_crawlspace_type",
     "condominium_indicator", "number_of_floors_in_the_insured_building",
     "occupancy_type", "flood_zone"
 )
@@ -25,18 +25,19 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     analysis_data <- analysis(splits)
     assessment_data <- assessment(splits)
 
-    rec <- recipe(amount_paid_on_building_claim ~ .,
+    rec_nn <- recipe(amount_paid_on_building_claim ~ .,
         data = analysis_data %>%
             select(-loss_proportion, -reported_zip_code)
     ) %>%
+        step_log(total_building_insurance_coverage) %>%
         step_normalize(all_numeric(), -all_outcomes()) %>%
         step_novel(all_nominal()) %>%
         # step_unknown(all_nominal(), new_level = "missing") %>%
         step_integer(all_nominal(), strict = TRUE, zero_based = TRUE) %>%
         prep(strings_as_factors = TRUE)
 
-    ds <- flood_dataset(juice(rec), categorical_cols, numeric_cols, response_col, env)
-    baked_test_data <- bake(rec, assessment_data)
+    ds <- flood_dataset(juice(rec_nn), categorical_cols, numeric_cols, response_col, env)
+    baked_test_data <- bake(rec_nn, assessment_data)
     test_ds <- flood_dataset(baked_test_data, categorical_cols, numeric_cols)
     train_indx <- sample(length(ds), 0.8 * length(ds))
     valid_indx <- seq_len(length(ds)) %>% setdiff(train_indx)
@@ -49,17 +50,20 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     model <- trivial_net(env$cardinalities, length(numeric_cols), function(x) 1)
 
-    optimizer <- optim_adam(model$parameters, lr = learning_rate)
+    optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
+    # optimizer <- optim_rmsprop(model$parameters, lr = 0.1)
 
     train_loop(model, train_dl, valid_dl, epochs, optimizer)
+
+    replace_unseen_level_weights_(model$embedder$embeddings)
 
     preds_nn <- get_preds(model, test_dl)
 
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
-        occupancy_type + flood_zone + primary_residence
+        occupancy_type + flood_zone + primary_residence + condominium_indicator + community_rating_system_discount
 
-    rec <- recipe(form,
+    rec_glm <- recipe(form,
         data = analysis_data
     ) %>%
         step_mutate(flood_zone = substr(flood_zone, 1, 1)) %>%
@@ -69,31 +73,54 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         prep(strings_as_factors = FALSE)
 
     model_glm <- glm(form,
-        family = Gamma(link = log), data = juice(rec),
+        family = Gamma(link = log), data = juice(rec_glm),
         control = list(maxit = 100)
     )
 
-    preds_glm <- predict(model_glm, bake(rec, assessment_data), type = "response")
+    preds_glm <- predict(model_glm, bake(rec_glm, assessment_data), type = "response")
+
+    rec_glm2 <- recipe(form,
+        data = analysis_data
+    ) %>%
+        step_novel(all_nominal()) %>%
+        step_log(total_building_insurance_coverage) %>%
+        prep(strings_as_factors = FALSE)
+
+    key <- key_with_embeddings(model$embedder$embeddings, rec_nn$steps[[4]]$key)
+    model_glm2 <- glm(form,
+        family = Gamma(link = log), data = map_cats_to_embeddings(juice(rec_glm2), key),
+        control = list(maxit = 100)
+    )
+    preds_glm2 <- predict(model_glm2,
+        bake(rec_glm2, assessment_data) %>% map_cats_to_embeddings(key),
+        type = "response"
+    )
 
     actuals <- assessment_data %>%
         pull(amount_paid_on_building_claim)
 
     list(
         model_nn = model,
+        rec_nn = rec_nn,
         model_glm = model_glm,
+        rec_glm = rec_glm,
+        model_glm2 = model_glm2,
+        rec_glm2 = rec_glm2,
         actuals = actuals,
         preds_nn = preds_nn,
-        preds_glm = preds_glm
+        preds_glm = preds_glm,
+        preds_glm2 = preds_glm2
     )
 }
 
 cv_results <- cvfolds$splits %>%
-    lapply(function(x) model_analyze_assess(x, 0.01, 50, 10000))
+    lapply(function(x) model_analyze_assess(x, 0.05, 5, 1100))
 
 cv_results %>%
     map(function(x) {
         list(
             rmse_nn = sqrt(sum((x$actuals - x$preds_nn)^2) / length(x$actuals)),
-            rmse_glm = sqrt(sum((x$actuals - x$preds_glm)^2) / length(x$actuals))
+            rmse_glm = sqrt(sum((x$actuals - x$preds_glm)^2) / length(x$actuals)),
+            rmse_glm2 = sqrt(sum((x$actuals - x$preds_glm2) ^ 2) / length(x$actuals))
         )
     })

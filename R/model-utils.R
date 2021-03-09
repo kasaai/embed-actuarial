@@ -7,7 +7,7 @@ flood_dataset <- dataset(
             `+`(1L) %>%
             torch_tensor()
         if (!is.null(env)) {
-            assign("cardinalities", sapply(df[categorical_cols], function(x) max(x) + 3), envir = env)
+            assign("cardinalities", sapply(df[categorical_cols], function(x) max(x) + 2), envir = env)
         }
         self$xnum <- df[numeric_cols] %>%
             as.matrix() %>%
@@ -74,7 +74,8 @@ trivial_net <- nn_module(
         all <- torch_cat(list(embedded, xnum$to(dtype = torch_float())), dim = 2)
         all %>%
             self$output() %>%
-            nnf_softplus()
+            torch_exp()
+            # nnf_softplus()
     }
 )
 
@@ -100,6 +101,53 @@ simple_net <- nn_module(
             nnf_softplus()
     } 
 )
+
+train_loop_alternate <- function(model, train_dl, valid_dl, epochs, optimizer) {
+    for (epoch in seq_len(epochs)) {
+        model$train()
+        train_losses <- c()
+
+        odd_epoch <- epoch %% 2 == 1
+
+        for (p in model$embedder$parameters) {
+            p$requires_grad_(odd_epoch)
+        }
+
+        for (p in model$output$parameters) {
+            p$requires_grad_(!odd_epoch)
+        }
+
+        for (b in enumerate(train_dl)) {
+            optimizer$zero_grad()
+            output <- model(b$x[[1]], b$x[[2]])
+            loss <- nnf_mse_loss(output, b$y)
+            loss$backward()
+
+            # if (odd_epoch) {
+            #     nn_utils_clip_grad_value_(model$embedder$parameters, 1)
+            # } else {
+            #     nn_utils_clip_grad_value_(model$output$parameters, 1)
+            # }
+
+            optimizer$step()
+            train_losses <- c(train_losses, loss$item())
+        }
+
+        model$eval()
+        valid_losses <- c()
+
+        for (b in enumerate(valid_dl)) {
+            output <- model(b$x[[1]], b$x[[2]])
+            loss <- nnf_mse_loss(output, b$y)
+            valid_losses <- c(valid_losses, loss$item())
+        }
+
+        cat(sprintf(
+            "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
+            mean(train_losses), mean(valid_losses)
+        ))
+    }    
+}
 
 train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
     for (epoch in seq_len(epochs)) {
@@ -137,4 +185,45 @@ get_preds <- function(model, dl) {
         preds <- c(preds, model(b$x[[1]], b$x[[2]]) %>% as.array())
     }
     preds
+}
+
+replace_unseen_level_weights_ <- function(embeddings) {
+    for (emb in as.list(embeddings)) {
+        emb_dim <- dim(emb$weight)[[1]]
+        median_wt <- torch_median(emb$weight[1:(emb_dim - 1),])
+        emb$weight[emb_dim, 1] <- median_wt
+    }
+
+    embeddings
+}
+
+map_cats_to_embeddings <- function(data, keys) {
+    for (v in names(keys)) {
+        mapping_table <- keys[[v]] %>% 
+            select(value, embedding) %>%
+            rename(!!v := value)
+        data <- data %>%
+            left_join(mapping_table, by = v) %>% 
+            select(-!!v) %>% 
+            rename(!!v := embedding)
+    }
+
+    data
+}
+
+key_with_embeddings <- function(embeddings, key) {
+    Map(function(embedder, key) {
+    # key$integer
+    embedding <- key$integer %>% 
+      `+`(1L)  %>% 
+      torch_tensor(dtype = torch_int()) %>% 
+      embedder() %>% 
+      as.numeric()
+    key[["embedding"]] <- embedding
+    key
+},
+    as.list(embeddings),
+    key
+) %>% 
+    setNames(names(key))
 }
