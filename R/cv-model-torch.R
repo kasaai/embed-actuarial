@@ -59,6 +59,16 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     preds_nn <- get_preds(model, test_dl)
 
+    model2 <- simple_net(env$cardinalities, length(numeric_cols), units = 64, 
+                         fn_embedding_dim = function(x) ceiling(x / 2)
+    )
+
+    optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
+
+    train_loop(model2, train_dl, valid_dl, epochs, optimizer)
+
+    preds_nn2 <- get_preds(model2, test_dl)
+
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
         occupancy_type + flood_zone + primary_residence + condominium_indicator + community_rating_system_discount
@@ -101,6 +111,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     list(
         model_nn = model,
+        model_nn2 = model2,
         rec_nn = rec_nn,
         model_glm = model_glm,
         rec_glm = rec_glm,
@@ -108,18 +119,20 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         rec_glm2 = rec_glm2,
         actuals = actuals,
         preds_nn = preds_nn,
+        preds_nn2 = preds_nn2,
         preds_glm = preds_glm,
         preds_glm2 = preds_glm2
     )
 }
 
 cv_results <- cvfolds$splits %>%
-    lapply(function(x) model_analyze_assess(x, 0.05, 5, 1100))
+    lapply(function(x) model_analyze_assess(x, 0.1, 5, 1100))
 
 cv_results %>%
     map(function(x) {
         list(
             rmse_nn = sqrt(sum((x$actuals - x$preds_nn)^2) / length(x$actuals)),
+            rmse_nn2 = sqrt(sum((x$actuals - x$preds_nn2)^2) / length(x$actuals)), 
             rmse_glm = sqrt(sum((x$actuals - x$preds_glm)^2) / length(x$actuals)),
             rmse_glm2 = sqrt(sum((x$actuals - x$preds_glm2) ^ 2) / length(x$actuals))
         )

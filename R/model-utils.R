@@ -189,9 +189,12 @@ get_preds <- function(model, dl) {
 
 replace_unseen_level_weights_ <- function(embeddings) {
     for (emb in as.list(embeddings)) {
-        emb_dim <- dim(emb$weight)[[1]]
-        median_wt <- torch_median(emb$weight[1:(emb_dim - 1),])
-        emb$weight[emb_dim, 1] <- median_wt
+        emb_num_lvls <- dim(emb$weight)[[1]]
+        emb_dim <- dim(emb$weight)[[2]]
+        for (j in seq_len(emb_dim)) {
+            median_wt <- torch_median(emb$weight[1:(emb_num_lvls - 1), j])
+            emb$weight[emb_num_lvls, j] <- median_wt
+        }
     }
 
     embeddings
