@@ -48,7 +48,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
     test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 
-    model <- trivial_net(env$cardinalities, length(numeric_cols), function(x) 1)
+    model <- simple_net(env$cardinalities, length(numeric_cols), units = 16, fn_embedding_dim = function(x) 1)
 
     optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
     # optimizer <- optim_rmsprop(model$parameters, lr = 0.1)
@@ -60,13 +60,15 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     preds_nn <- get_preds(model, test_dl)
 
     model2 <- simple_net(env$cardinalities, length(numeric_cols),
-        units = 64,
+        units = 16,
         fn_embedding_dim = function(x) ceiling(x / 2)
     )
 
     optimizer <- optim_adam(model2$parameters, lr = learning_rate, weight_decay = 0)
 
     train_loop(model2, train_dl, valid_dl, epochs, optimizer)
+
+    replace_unseen_level_weights_(model2$embedder$embeddings)
 
     preds_nn2 <- get_preds(model2, test_dl)
 
