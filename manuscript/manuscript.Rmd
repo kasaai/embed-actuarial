@@ -363,28 +363,39 @@ The response variable we take from the dataset is "Amount Paid on Building Claim
 
 ## Models
 
-1. A GLM with gamma distribution and log link function
-2. A linear model with categorical embeddings and an exponential output activation
-3. A GLM with the categorical predictors replaced by the trained embeddings from Model 2
-4. A multilayer perceptron regression model
+In this subsection, we develop the following models:
+
+1. A GLM with gamma distribution and log link function,
+2. A linear model with categorical embeddings and an exponential output activation,
+3. A GLM with the categorical predictors replaced by the trained embeddings from Model 2, and
+4. A multilayer perceptron model with categorical embeddings.
+
+These model architectures are relatively uncomplicated by today's standards, and are so chosen to better highlight the
+embedding components. Later, in Section X (TODO), we will investigate more involved architectures utilizing embeddings
+that represent the state of the art for modeling tabular data.
 
 ### Model 1: Simple GLM 
 
 While this paper focuses on embeddings in neural networks, we begin with a GLM to provide a common frame of 
 reference since most actuaries are familiar with the technique. 
-While GLMs are commonplace and well-studied in the actuarial literature, there are still plenty of decisions to be made
-in the modeling process; see, for example, @Goldburd for an in-depth discussion. For our purpose of establishing a
-baseline model, we proceed with what we perceive as reasonable decisions around feature engineering and model structure, outlined below:
+Although GLMs are commonplace and well-studied in the actuarial literature, there are still plenty of decisions to 
+be made in the modeling process; see, for example, @Goldburd for an in-depth discussion. For our purpose of 
+establishing a baseline, we proceed with what we perceive as reasonable decisions around feature engineering and model structure, outlined below:
 
 -   Target variable: Amount paid on building claim
--   Predictors: *Log* of **building insurance coverage**, **basement enclosure type**, **number of floors in the insured building**, *prefix* of **flood zone**, and ***primary residence***.
--   Link function: log
+-   Predictors:
+    - $\log$ `building_insurance_coverage`
+    - `basement_enclosure_type`, 
+    - `number_of_floors_in_the_insured_building`
+    - *prefix* of `flood_zone`
+    - `primary_residence`
+-   Link function: $\log$
 -   Distribution: gamma
 
-We take the log of the continuous predictor **building insurance coverage**, which allows the scale of the predictor to 
-match that of the target variable. Because the **flood zone** variable in the original data contains 60 levels, we take 
-the prefix of the zone code, which corresponds to the level of risk as determined by FEMA [^8]. For example, *A01*, 
-*A02*, and so on are recoded as simply *A*.
+We take the log of the continuous predictor `building_insurance_coverage`, which allows the scale of the predictor to 
+match that of the target variable. Because the `flood_zone` variable in the original data contains 60 levels, we take 
+the prefix of the zone code, which corresponds to the level of risk as determined by FEMA [^8]. For example, `"A01"`, 
+`"A02"`, and so on are recoded as simply `"A"`.
 
 [^8]: https://www.floodsmart.gov/flood-map-zone/find-yours
 
