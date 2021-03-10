@@ -366,15 +366,15 @@ The response variable we take from the dataset is "Amount Paid on Building Claim
 In this subsection, we develop the following models:
 
 1. A GLM with gamma distribution and log link function,
-2. A linear model with categorical embeddings and an exponential output activation,
-3. A GLM with the categorical predictors replaced by the trained embeddings from Model 2, and
-4. A multilayer perceptron model with categorical embeddings.
+2. A neural network with unidimensional categorical embeddings,
+3. A GLM with the categorical predictors replaced by the trained embeddings from Model 2,
+4. A neural network with multidimensional categorical embeddings.
 
 These model architectures are relatively uncomplicated by today's standards, and are so chosen to better highlight the
 embedding components. Later, in Section X (TODO), we will investigate more involved architectures utilizing embeddings
 that represent the state of the art for modeling tabular data.
 
-### Model 1: Simple GLM 
+### Model 1: GLM 
 
 While this paper focuses on embeddings in neural networks, we begin with a GLM to provide a common frame of 
 reference since most actuaries are familiar with the technique. 
@@ -402,17 +402,13 @@ the prefix of the zone code, which corresponds to the level of risk as determine
 A log link together with the gamma distribution is a standard choice for severity modeling, which provides a 
 multiplicative structure where the response is positive.
 
-### Model 2: Linear Model with Embeddings
+### Model 2: Neural Network with Unidimensional Embeddings
 
-For the neural net, we utilize the same response variable, amount paid on building claim. We perform the following 
-transformations on the predictor variables:
-
-- Normalize the numeric variable ***building insurance coverage*** (center by mean and scale by standard deviation), 
-- One-hot encode the **primary residence** variable, and 
-- Apply embedding layers of dimension one to the rest of the categorical variables. 
-
-In terms of architecture, we connect the embeddings and the normalized numeric variable to a single output unit with 
-softplus activation, where the softplus function is defined to be
+For Model 2, we build a feedforward neural network. The categorical inputs go through one-dimensional embedding
+layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which
+have been normalized in data pre-processing, before being sent to a single linear layer of 16 units. A ReLU activation
+is then applied to the outputs before they are sent to a final linear layer resulting in a scalar. To constrain
+predictions to be positive, we apply softplus activation, which is defined to be
 
 $$
 x \mapsto \log(1 + e^x). 
@@ -420,11 +416,13 @@ $$
 
 Figure \@ref(fig:nn-1) exhibits the architecture of our simple neural network.
 
-```{r nn-1, echo = FALSE, fig.cap = "blahblah", out.width = "80%", fig.align = "center"}
+```{r nn-1, echo = FALSE, fig.cap = "blahblah", out.width = "90%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
 ```
 
-(maybe include a second nn with actual hidden layers?)
+### Model 3: GLM with Neural Network Embeddings
+
+### Model 4: Neural Network with Multidimensional Embeddings
 
 ## Performance evaluation framework and results
 
