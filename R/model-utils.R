@@ -70,6 +70,8 @@ simple_net <- nn_module(
             sum()
         self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
         self$output <- nn_linear(units, 1)
+        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+        self$to(device = device)
     },
     forward = function(xcat, xnum) {
         embedded <- self$embedder(xcat)
@@ -130,14 +132,15 @@ train_loop_alternate <- function(model, train_dl, valid_dl, epochs, optimizer) {
 }
 
 train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
+    device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
     for (epoch in seq_len(epochs)) {
         model$train()
         train_losses <- c()
 
         for (b in enumerate(train_dl)) {
             optimizer$zero_grad()
-            output <- model(b$x[[1]], b$x[[2]])
-            loss <- nnf_mse_loss(output, b$y)
+            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))
+            loss <- nnf_mse_loss(output, b$y$to(device = device))
             loss$backward()
             optimizer$step()
             train_losses <- c(train_losses, loss$item())
@@ -147,8 +150,8 @@ train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
         valid_losses <- c()
 
         for (b in enumerate(valid_dl)) {
-            output <- model(b$x[[1]], b$x[[2]])
-            loss <- nnf_mse_loss(output, b$y)
+            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))
+            loss <- nnf_mse_loss(output, b$y$to(device = device))
             valid_losses <- c(valid_losses, loss$item())
         }
 
@@ -160,9 +163,13 @@ train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
 }
 
 get_preds <- function(model, dl) {
+    device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
     preds <- numeric(0)
     for (b in enumerate(dl)) {
-        preds <- c(preds, model(b$x[[1]], b$x[[2]]) %>% as.array())
+        preds <- c(
+            preds,
+            model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))$to(device = "cpu") %>% as.array()
+        )
     }
     preds
 }
@@ -195,13 +202,15 @@ map_cats_to_embeddings <- function(data, keys) {
 }
 
 key_with_embeddings <- function(embeddings, key) {
+    device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
     Map(
         function(embedder, key) {
             # key$integer
             embedding <- key$integer %>%
                 `+`(1L) %>%
-                torch_tensor(dtype = torch_int()) %>%
+                torch_tensor(dtype = torch_int(), device = device) %>%
                 embedder() %>%
+                (function(x) x$to(device = "cpu")) %>% 
                 as.numeric()
             key[["embedding"]] <- embedding
             key

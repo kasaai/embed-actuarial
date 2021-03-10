@@ -99,7 +99,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         step_log(total_building_insurance_coverage) %>%
         prep(strings_as_factors = FALSE)
 
-    key <- key_with_embeddings(model$embedder$embeddings, rec_nn$steps[[4]]$key)
+    key <- key_with_embeddings(model$embedder$embeddings, rec_nn$steps[[3]]$key)
     model_glm2 <- glm(form,
         family = Gamma(link = log), data = map_cats_to_embeddings(juice(rec_glm2), key),
         control = list(maxit = 100)
@@ -129,7 +129,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 }
 
 cv_results <- cvfolds$splits %>%
-    lapply(function(x) model_analyze_assess(x, 0.01, 1, 1100))
+    lapply(function(x) model_analyze_assess(x, 0.01, 1, 2000))
 
 cv_results %>%
     map(function(x) {
