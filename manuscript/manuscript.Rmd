@@ -18,7 +18,10 @@ bibliography: references.bib
 output:
   bookdown::pdf_book:
     base_format: rticles::arxiv_article
-extra_dependencies: ["amsmath"]
+header-includes: |
+    \usepackage{amsmath}
+    \usepackage{mathtools}
+    \DeclarePairedDelimiter\ceil{\lceil}{\rceil}
   
 ---
 
@@ -153,7 +156,7 @@ values and represented by the matrix $X_{num}$ with $J^{num}$ columns, and categ
 discrete values indicating one of several possible categories, represented by the matrix $X_{cat}$ with $J^{cat}$ 
 columns, such that $J^{num} + J^{cat} = J$.
 
-## Categorical data modeling
+## Categorical data modeling {#catdata}
 
 A categorical variable $X_j, j \in J_{cat}$ takes as its value only one of a finite number of labels. Let the set of 
 labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ 
@@ -437,6 +440,11 @@ For Model 3, we return to the GLM, but now we replace the categorical variables 
 scalar value and obtains its own coefficient. (TODO: insert formal eqn for mean)
 
 ### Model 4: Neural Network with Multidimensional Embeddings
+
+Model 4 is architecturally identical to Model 2, with the only difference being the number of embedding dimensions:
+instead of mapping factor levels to real numbers, we map them to a point in Euclidean space, where the dimension of the space is the ceiling
+of the factor's cardinality divided by two. Formally, in the notation of Section \ref{catdata},
+$q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$.
 
 ## Model Training and Results 
 
