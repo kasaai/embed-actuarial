@@ -59,31 +59,11 @@ embedding_module <- nn_module(
     }
 )
 
-trivial_net <- nn_module(
-    "baseline_net",
-    initialize = function(cardinalities,
-                          num_numerical,
-                          fn_embedding_dim = function(x) ceiling(x / 2)) {
-        self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
-        sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
-            sum()
-        self$output <- nn_linear(sum_embedding_dim + num_numerical, 1)
-    },
-    forward = function(xcat, xnum) {
-        embedded <- self$embedder(xcat)
-        all <- torch_cat(list(embedded, xnum$to(dtype = torch_float())), dim = 2)
-        all %>%
-            self$output() %>%
-            torch_exp()
-        # nnf_softplus()
-    }
-)
-
 simple_net <- nn_module(
-    "mlp",
+    "simple_net",
     initialize = function(cardinalities,
                           num_numerical,
-                          units = 64,
+                          units = 16,
                           fn_embedding_dim = function(x) ceiling(x / 2)) {
         self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
