@@ -406,8 +406,8 @@ multiplicative structure where the response is positive.
 
 For Model 2, we build a feedforward neural network. The categorical inputs go through one-dimensional embedding
 layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which
-have been normalized in data pre-processing, before being sent to a single linear layer of 16 units. A ReLU activation
-is then applied to the outputs before they are sent to a final linear layer resulting in a scalar. To constrain
+have been normalized in data pre-processing, before being sent to a hidden linear layer of 16 units. A ReLU (TODO: reference an equation in prev. section) activation
+is then applied to the outputs before they are sent to a final output layer resulting in a scalar. To constrain
 predictions to be positive, we apply softplus activation, which is defined to be
 
 $$
@@ -416,15 +416,29 @@ $$
 
 Figure \@ref(fig:nn-1) exhibits the architecture of our simple neural network.
 
-```{r nn-1, echo = FALSE, fig.cap = "blahblah", out.width = "90%", fig.align = "center"}
+```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "90%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
 ```
 
+With a single hidden layer, this architecture is the simplest nontrivial neural network; without the hidden layer and
+corresponding ReLU activation, we would actually recover a GLM structure where the link function is the output activation. 
+The choice of one for the embedding dimension is also due to simplicity: it is easily interpretable as the representation
+of each factor level as a point on the real number line, also, the trained embeddings are easily incorporated into a GLM
+which we will see in Model 3. In practice, the embedding dimension is a hyperparameter one can tune, for example via
+cross validation, and can vary for each variable. However, we also note that the choice of one for the 
+embedding output dimension is not an unreasonable one, especially when the cardinalities of the categorical variables
+are not unusually large.
+
+
 ### Model 3: GLM with Neural Network Embeddings
+
+For Model 3, we return to the GLM, but now we replace the categorical variables with the trained embeddings from Model
+2. In other words, our model now contains only continuous variables, and each categorical factor is represented as a
+scalar value and obtains its own coefficient. (TODO: insert formal eqn for mean)
 
 ### Model 4: Neural Network with Multidimensional Embeddings
 
-## Performance evaluation framework and results
+## Model Training and Results 
 
 To evaluate these baseline models and other models in this paper, we perform 10-fold 
 cross validation and compare the 

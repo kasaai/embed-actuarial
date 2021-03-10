@@ -29,7 +29,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         data = analysis_data %>%
             select(-loss_proportion, -reported_zip_code)
     ) %>%
-        step_log(total_building_insurance_coverage) %>%
+        # step_log(total_building_insurance_coverage) %>%
         step_normalize(all_numeric(), -all_outcomes()) %>%
         step_novel(all_nominal()) %>%
         # step_unknown(all_nominal(), new_level = "missing") %>%
