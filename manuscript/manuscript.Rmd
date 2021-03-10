@@ -21,8 +21,8 @@ output:
 header-includes: |
     \usepackage{amsmath}
     \usepackage{mathtools}
+    \usepackage{bm}
     \DeclarePairedDelimiter\ceil{\lceil}{\rceil}
-  
 ---
 
 # Introduction
@@ -309,10 +309,53 @@ data.frame(sample_dat, dimension1 = rnorm(5), dimension2 = rnorm(5)) %>%
   knitr::kable(label = "", caption = "Example (random) embeddings of the state variable")
 ```
 
-When applying embeddings in a data modeling context using neural networks, the values of the embeddings will be 
-calibrated during the same fitting process that calibrates the parameters of the neural network.
+When applying embeddings in a data modeling context using neural networks, the values of the embeddings will be calibrated during the same fitting process that calibrates the parameters of the neural network. The following equation shows how the first layer of a neural network incorporating embeddings might be written:
+
+```{=latex}
+\begin{equation}
+  z^1 = \sigma(a_1.X'+ b_1), 
+\end{equation}
+```
+where we represent the output of embedding layers concatenated together with any numerical inputs as $X'$.
 
 ### Attention {#attention}
+
+Attention mechanisms have been widely applied within the deep learning literature to give more flexibility to RNNs [@Bahdanau2015a] and subsequently as a replacement for FCNs in the so-called Transformer architecture, which is now widely used in natural language processing [@Vaswani2017a], and, more recently, has been applied to computer vision and tabular modelling tasks. Attention mechanisms allow deep neural nets to choose covariates entering the model in a flexible manner; these types of applications are demonstrated in, for example, [@Vaswani2017a]. In this section we provide an introduction to attention mechanisms and then discuss applications of attention to modeling tabular data.
+
+An attention mechanism is a mapping:
+
+```{=latex}
+\begin{equation}
+A: \mathbb{R}^{q \times (q \times d) \times (q \times d)} \to \mathbb{R}^q, ~~
+(\mathbf{q}, K, V) ~\mapsto ~ \mathbf{v} = A(\mathbf{q}, K, V),
+\label{eq:attention}
+\end{equation}
+```
+where $\mathbf{q} \in \mathbb{R}^q$ is a query vector, $K \in \mathbb{R}^{q \times d}$ is a matrix of key vectors, $V \in \mathbb{R}^{q \times d}$ is a matrix of value vectors and $\mathbf{v} \in \mathbb{R}^q$, the output of the attention mechanism, is a new vector of values. Several different options for the mapping \eqref{eq:attention} exist in the literature; here we first describe the self-attention mechanism used in [@Vaswani2017a]. In more detail, consider that $V$ is a matrix of covariates relating to a regression problem, which can be composed of embeddings of the same dimension for several categorical variables. We wish to apply the attention mechanism to $V$ to estimate the most important of these embeddings for the regression problem. To do this, we formulate the query vector $\mathbf{q}$ which contains information about the regression problem at hand; this is usually done by passing $L$ through a FCN. Similarly, the matrix $K$ contains the relevance of each row of $L$ for the regression problem and is also usually derived by passing each row of $L$ through another FCN. Finally, the matrix $V$ can be set equal to $L$ or alternatively, can be derived as a transformation of $L$ using a third FCN. The first step of the attention mechanism is to derive a vector $\mathbf{a}$ of attention scores:
+
+```{=latex}
+\begin{equation}
+\mathbb{R}^{(1 \times q) \times (q \times d)} \to \mathbb{R}^{1 \times d}, ~~
+(\bold{q}, K) ~\mapsto ~ \mathbf{a} = \langle \mathbf{q}, K^T \mathbb\rangle.
+\label{eq:attention_scores}
+\end{equation}
+```
+The attention scores are then normalized using a soft max function i.e.
+
+```{=latex}
+\begin{equation}
+a^*_i = \frac{e^{(a_i)}}{\sum_{n=1}^{d} e^{(a_n)}}.
+\end{equation}
+```
+Finally, a linear combination of $V$ is formed:
+
+```{=latex}
+\begin{equation}
+\mathbb{R}^{(1 \times d) \times (d \times q)} \to \mathbb{R}^{1 \times q}, ~~
+(\mathbf{a^*}, V) ~\mapsto ~ \mathbf{v} = \langle \mathbf{a^*}, V \mathbb\rangle.
+\label{eq:attention_output}
+\end{equation}
+```
 
 # Predictive Modeling with Embeddings
 
