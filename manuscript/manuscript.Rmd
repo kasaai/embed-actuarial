@@ -170,16 +170,16 @@ require(cellar)
 require(recipes)
 require(data.table)
 
-states= fread("../manuscript/states.csv")
+states <- fread("../manuscript/states.csv")
 set.seed(42)
-sample_dat = sample_n(states,5) %>% arrange(state)
+sample_dat <- sample_n(states, 5) %>% arrange(state)
 
-rec = recipe(~state, data = sample_dat)
+rec <- recipe(~state, data = sample_dat)
 
-dummies <- rec %>% step_dummy(state, one_hot =T)
+dummies <- rec %>% step_dummy(state, one_hot = TRUE)
 dummies <- prep(dummies, training = sample_dat)
 
-dummy_data <- bake(dummies, new_data =sample_dat)
+dummy_data <- bake(dummies, new_data = sample_dat)
 
 cbind(sample_dat, dummy_data) %>%
   knitr::kable(label = "onehot", caption = "Example one-hot encoding of the state variable")
@@ -192,21 +192,20 @@ in Table \ref{dummy}.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
 
-states= fread("../manuscript/states.csv")
+states <- fread("../manuscript/states.csv")
 set.seed(42)
 
-sample_dat = sample_n(states,5) %>% arrange(state)
+sample_dat <- sample_n(states, 5) %>% arrange(state)
 
-rec = recipe(~state, data = sample_dat)
+rec <- recipe(~state, data = sample_dat)
 
-dummies <- rec %>% step_dummy(state, one_hot =F)
+dummies <- rec %>% step_dummy(state, one_hot = FALSE)
 dummies <- prep(dummies, training = sample_dat)
 
-dummy_data <- bake(dummies, new_data =sample_dat)
+dummy_data <- bake(dummies, new_data = sample_dat)
 
 cbind(sample_dat, dummy_data) %>%
   knitr::kable(label = "dummy", caption = "Example dummy encoding of the state variable")
-
 ```
 
 After encoding the categorical data in this manner, most regression models such as GLMs will then fit coefficients for 
@@ -331,6 +330,7 @@ A: \mathbb{R}^{q \times (q \times d) \times (q \times d)} \to \mathbb{R}^q, ~~
 \label{eq:attention}
 \end{equation}
 ```
+
 where $\mathbf{q} \in \mathbb{R}^q$ is a query vector, $K \in \mathbb{R}^{q \times d}$ is a matrix of key vectors, $V \in \mathbb{R}^{q \times d}$ is a matrix of value vectors and $\mathbf{v} \in \mathbb{R}^q$, the output of the attention mechanism, is a new vector of values. Several different options for the mapping \eqref{eq:attention} exist in the literature; here we first describe the self-attention mechanism used in [@Vaswani2017a]. In more detail, consider that $V$ is a matrix of covariates relating to a regression problem, which can be composed of embeddings of the same dimension for several categorical variables. We wish to apply the attention mechanism to $V$ to estimate the most important of these embeddings for the regression problem. To do this, we formulate the query vector $\mathbf{q}$ which contains information about the regression problem at hand; this is usually done by passing $L$ through a FCN. Similarly, the matrix $K$ contains the relevance of each row of $L$ for the regression problem and is also usually derived by passing each row of $L$ through another FCN. Finally, the matrix $V$ can be set equal to $L$ or alternatively, can be derived as a transformation of $L$ using a third FCN. The first step of the attention mechanism is to derive a vector $\mathbf{a}$ of attention scores:
 
 ```{=latex}
