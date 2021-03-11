@@ -133,7 +133,7 @@ into a combined actuarial neural network, with subsequent contributions in P&C p
 in IBNR reserving by [@Gabrielli2019c] and [@Gabrielli2019]. Other applications in IBNR reserving are in [@Kuo2020] and 
 [@Delong2020a] who use embedding layers to model individual claims development.
 
-# Definitions {#defns}
+# Theoretical Overview {#defns}
 
 In this study, we are concerned with regression modelling, which is the task of predicting an unknown outcome $y$ on the 
 basis of information about that outcome contained in predictor variables, or features, stored in a matrix $X$. For 
