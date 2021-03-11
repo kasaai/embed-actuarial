@@ -1,22 +1,23 @@
 flood_dataset <- dataset(
     "flood",
     initialize = function(df, categorical_cols, numeric_cols, response_col = NULL, env = NULL) {
+        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
         self$is_train <- if (!is.null(response_col)) TRUE else FALSE
         self$xcat <- df[categorical_cols] %>%
             as.matrix() %>%
             `+`(1L) %>%
-            torch_tensor()
+            torch_tensor(device = device)
         if (!is.null(env)) {
             assign("cardinalities", sapply(df[categorical_cols], function(x) max(x) + 2), envir = env)
         }
         self$xnum <- df[numeric_cols] %>%
             as.matrix() %>%
-            torch_tensor()
+            torch_tensor(device = device)
 
         if (self$is_train) {
             self$y <- df[[response_col]] %>%
                 as.matrix() %>%
-                torch_tensor()
+                torch_tensor(device = device)
         }
 
         self
