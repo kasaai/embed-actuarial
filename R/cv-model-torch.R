@@ -48,7 +48,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
     test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 
-    model <- simple_net(env$cardinalities, length(numeric_cols), units = 16, fn_embedding_dim = function(x) 1)
+    model <- simple_net(env$cardinalities, length(numeric_cols), units = 64, fn_embedding_dim = function(x) 1)
 
     optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
     # optimizer <- optim_rmsprop(model$parameters, lr = 0.1)
@@ -60,7 +60,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     preds_nn <- get_preds(model, test_dl)
 
     model2 <- simple_net(env$cardinalities, length(numeric_cols),
-        units = 16,
+        units = 64,
         fn_embedding_dim = function(x) ceiling(x / 2)
     )
 
@@ -129,7 +129,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 }
 
 cv_results <- cvfolds$splits %>%
-    lapply(function(x) model_analyze_assess(x, 0.01, 1, 2000))
+    lapply(function(x) model_analyze_assess(x, 0.1, 1, 1024))
 
 cv_results %>%
     map(function(x) {
