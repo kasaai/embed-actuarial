@@ -22,6 +22,7 @@ header-includes: |
     \usepackage{amsmath}
     \usepackage{mathtools}
     \usepackage{bm}
+    \usepackage{bbm}
     \DeclarePairedDelimiter\ceil{\lceil}{\rceil}
 ---
 
@@ -465,7 +466,16 @@ We take the log of the continuous predictor `building_insurance_coverage`, which
 match that of the target variable. Because the `flood_zone` variable in the original data contains 60 levels, we take 
 the prefix of the zone code, which corresponds to the level of risk as determined by FEMA [^8]. For example, `"A01"`, 
 `"A02"`, and so on are recoded as simply `"A"`. A log link together with the gamma distribution is a standard choice 
-for severity modeling, which provides a multiplicative structure where the response is positive.
+for severity modeling, which provides a multiplicative structure where the response is positive. Following the notation
+in \@ref(catdata), the number of parameters in the GLM is 
+
+\begin{equation}
+1 + |J^{\text{num}}| + \left(\sum_{j \in J^{\text{cat}}} n_{\mathcal{P}}^j\right) - |J^{\text{cat}}|:
+(\#eq:glm1)
+\end{equation}
+
+one for the intercept, one for each numeric variable, and the numbers of levels minus one (due to dummy coding) for 
+each categorical variable.
 
 [^8]: https://www.floodsmart.gov/flood-map-zone/find-yours
 
@@ -504,7 +514,7 @@ $$
 x \mapsto \log(1 + e^x). 
 $$
 
-```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "90%", fig.align = "center"}
+```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
 ```
 
@@ -557,14 +567,79 @@ Table: (\#tab:embeddings-flood-zone) Excerpt of learned embeddings for `flood_zo
 
 For Model 3, we return to the GLM, but now we replace the categorical variables with the trained embeddings from Model
 2. In other words, our model now contains only continuous variables, and each categorical factor is represented as a
-scalar value and obtains its own coefficient. (TODO: insert formal eqn for mean)
+scalar value and obtains its own coefficient. In contrast with the number of parameters computed in Equation
+\@ref(eq:glm1), we have fewer parameters for this model:
+
+\begin{equation}
+1 + |J^{\text{num}}| + |J^{\text{cat}}|.
+(\#eq:glm2)
+\end{equation}
+
+Hence, the model can be written as
+
+\begin{equation}
+\mu_i = \beta_0 + \sum_{j \in J^{\text{num}}}\beta_j x_{i,j} + \sum_{j \in J^{\text{cat}}} \beta_j z_{i,j},
+\end{equation}
+
+where $z_{i,j}$ represents the embedding value for $i$th instance of the categorical column $X_j$. 
+
+Although in this particular example we incorporate one-dimensional embeddings, one can easily include multidimensional
+embeddings, which would increase the model's flexibility. The modeler would need to balance the additional lift with
+some loss of interpretability, since with one-dimensional embeddings, our GLM structure dictates that there is a 
+monotonic relationship between the predicted response and the input embedding, which could be desirable in certain
+use cases (and undesirable in others.)
+
+Since we only have a few parameters in this model, we exhibit the full list of fitted coefficients in Table 
+\@ref(tab:glm2).
+
+Table: (\#tab:glm2) Coefficients of Model 3.
+
+|term                                     | estimate|
+|:----------------------------------------|--------:|
+|(Intercept)                              |    2.389|
+|total_building_insurance_coverage        |    0.568|
+|basement_enclosure_crawlspace_type       |    0.136|
+|number_of_floors_in_the_insured_building |   -0.024|
+|occupancy_type                           |    0.067|
+|flood_zone                               |    0.035|
+|primary_residence                        |   -0.001|
+|community_rating_system_discount         |    0.504|
+
 
 ### Model 4: Neural Network with Multidimensional Embeddings
 
 Model 4 is architecturally identical to Model 2, with the only difference being the number of embedding dimensions:
-instead of mapping factor levels to real numbers, we map them to a point in Euclidean space, where the dimension of the space is the ceiling
+instead of mapping factor levels to real numbers, we map them to points in Euclidean space, where the dimension of the 
+space is the ceiling
 of the factor's cardinality divided by two. Formally, in the notation of Section \ref{catdata},
-$q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$.
+$q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$. Following the practice from the previous three
+models, we list the fitted embeddings for a couple variables in Tables \@ref(tab:nn2-occupancy-type) and 
+\@ref(tab:nn2-flood-zone). Note that, for `flood_zone`, we are
+only displaying the embedding for *one* level.
+
+Table: (\#tab:nn2-occupancy-type) Learned embeddings for `occupancy_type` in Model 4.
+
+|level                                       |    e1|    e2|   e3|
+|:-------------------------------------------|-----:|-----:|----:|
+|2 to 4 unit residential buidling            | -1.44| -1.97| 2.35|
+|Non-residential building                    | -6.83| -8.11| 5.34|
+|Residential building with more than 4 units | -7.63| -6.58| 5.09|
+|Single family residence                     | -1.61| -2.54| 3.01|
+
+Table: (\#tab:nn2-flood-zone) Learned embeddings for level `"A00"` of variable `flood_zone` in Model 4.
+
+|dimension |value  |dimension |value  |dimension |value  |dimension |value  |
+|:---------|:------|:---------|:------|:---------|:------|:---------|:------|
+|e1        |0.020  |e11       |2.146  |e21       |-1.933 |e31       |-0.941 |
+|e2        |-0.885 |e12       |1.723  |e22       |1.150  |e32       |-1.279 |
+|e3        |-0.126 |e13       |0.378  |e23       |0.863  |e33       |-0.360 |
+|e4        |1.491  |e14       |-0.310 |e24       |-0.471 |e34       |-1.173 |
+|e5        |0.980  |e15       |2.482  |e25       |0.929  |          |       |
+|e6        |0.952  |e16       |1.823  |e26       |-1.139 |          |       |
+|e7        |-0.217 |e17       |-2.715 |e27       |0.113  |          |       |
+|e8        |-0.611 |e18       |1.144  |e28       |1.155  |          |       |
+|e9        |0.919  |e19       |-0.045 |e29       |0.707  |          |       |
+|e10       |-1.196 |e20       |0.467  |e30       |1.358  |          |       |
 
 ## Model Training and Results 
 
