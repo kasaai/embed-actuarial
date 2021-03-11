@@ -133,7 +133,7 @@ into a combined actuarial neural network, with subsequent contributions in P&C p
 in IBNR reserving by [@Gabrielli2019c] and [@Gabrielli2019]. Other applications in IBNR reserving are in [@Kuo2020] and 
 [@Delong2020a] who use embedding layers to model individual claims development.
 
-# Definitions {#defns}
+# Theoretical Overview {#defns}
 
 In this study, we are concerned with regression modelling, which is the task of predicting an unknown outcome $y$ on the 
 basis of information about that outcome contained in predictor variables, or features, stored in a matrix $X$. For 
@@ -351,8 +351,6 @@ derived by passing each row of $L$ through another FCN. Finally, the matrix $V$ 
 alternatively, can be derived as a transformation of $L$ using a third FCN. The first step of the attention mechanism 
 is to derive a vector $\mathbf{a}$ of attention scores:
 
-lkasdjflsda lfksja klfsajdkfs fkas jdfkjdsa kfjsadkfjskdf jkads fjkasdf jkasdfjksadjf kasdfj ksajfkasdj fksadjf ksadj fksajdfkjsa dfkdsjfkasdjf kasjdf kasjdf kajf dksajf kdsajf ksajfdsak j fdskajfdskajfsdkajfksdajfkasdjf kajsdfkajsdf kasjfkasjfksajf dksa
-
 ```{=latex}
 \begin{equation}
 \mathbb{R}^{(1 \times q) \times (q \times d)} \to \mathbb{R}^{1 \times d}, ~~
@@ -385,7 +383,7 @@ fit, and evaluate GLMs and neural networks utilizing embeddings for this problem
 techniques for model interpretation. As we proceed, we also incorporate practical technical guidance on modeling
 procedure.
 
-## Problem Description and Data
+## Problem Description and Experiment Setup
 
 The working example for our experiments is as follows: Given a set of claim characteristics, we predict the losses paid 
 on the property coverage of the policy. The data we use comes from the National Flood Insurance Program (NFIP) and is 
@@ -427,6 +425,9 @@ knitr::kable(
 
 The response variable we take from the dataset is "Amount Paid on Building Claim", which is a numeric variable.
 
+(talk about experiment setup -- we take a subset of data that's shared for all models, then for the CV performance
+evaluation only we use all data in CV splits?)
+
 ## Models
 
 In this subsection, we develop the following models:
@@ -439,6 +440,8 @@ In this subsection, we develop the following models:
 These model architectures are relatively uncomplicated by today's standards, and are so chosen to better highlight the
 embedding components. Later, in Section X (TODO), we will investigate more involved architectures utilizing embeddings
 that represent the state of the art for modeling tabular data.
+
+
 
 ### Model 1: GLM 
 
@@ -461,18 +464,39 @@ establishing a baseline, we proceed with what we perceive as reasonable decision
 We take the log of the continuous predictor `building_insurance_coverage`, which allows the scale of the predictor to 
 match that of the target variable. Because the `flood_zone` variable in the original data contains 60 levels, we take 
 the prefix of the zone code, which corresponds to the level of risk as determined by FEMA [^8]. For example, `"A01"`, 
-`"A02"`, and so on are recoded as simply `"A"`.
+`"A02"`, and so on are recoded as simply `"A"`. A log link together with the gamma distribution is a standard choice 
+for severity modeling, which provides a multiplicative structure where the response is positive.
 
 [^8]: https://www.floodsmart.gov/flood-map-zone/find-yours
 
-A log link together with the gamma distribution is a standard choice for severity modeling, which provides a 
-multiplicative structure where the response is positive.
+In Table \@ref(tab:relativities), we exhibit an exerpt of the relativities, or exponentiated fitted coefficients, 
+of a couple categorical variables. Recall that the choice of the log link gives a multiplicative structure, so the
+interpretation of 1.37 for `occupancy_type = "Non-residential building"` is that, all else equal, the expected 
+loss for
+a policy for a non-residential building is 1.37 times that of a policy for a single family home, which is the base,
+or reference, level for the factor.
+
+Table: (\#tab:relativities) Excerpt of relativities for Model 1.
+
+|variable       |label                                       | relativity|
+|:--------------|:-------------------------------------------|----------:|
+|occupancy_type |Single family residence                     |       1.00|
+|occupancy_type |Non-residential building                    |       1.37|
+|occupancy_type |2 to 4 unit residential buidling            |       1.15|
+|occupancy_type |Residential building with more than 4 units |       1.64|
+|flood_zone     |B                                           |       1.00|
+|flood_zone     |A                                           |       0.84|
+|flood_zone     |C                                           |       0.60|
+|flood_zone     |X                                           |       0.70|
+|flood_zone     |V                                           |       0.78|
+|flood_zone     |D                                           |       0.89|
 
 ### Model 2: Neural Network with Unidimensional Embeddings
 
-For Model 2, we build a feedforward neural network. The categorical inputs go through one-dimensional embedding
+For Model 2, we build a feedforward neural network, whose architecture is shown in Figure \@ref(fig:nn-1). 
+The categorical inputs go through one-dimensional embedding
 layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which
-have been normalized in data pre-processing, before being sent to a hidden linear layer of 16 units. A ReLU (TODO: reference an equation in prev. section) activation
+have been normalized in data pre-processing, before being sent to a hidden linear layer of 64 units. A ReLU (TODO: reference an equation in prev. section) activation
 is then applied to the outputs before they are sent to a final output layer resulting in a scalar. To constrain
 predictions to be positive, we apply softplus activation, which is defined to be
 
@@ -480,21 +504,54 @@ $$
 x \mapsto \log(1 + e^x). 
 $$
 
-Figure \@ref(fig:nn-1) exhibits the architecture of our simple neural network.
-
 ```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "90%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
 ```
 
 With a single hidden layer, this architecture is the simplest nontrivial neural network; without the hidden layer and
-corresponding ReLU activation, we would actually recover a GLM structure where the link function is the output activation. 
-The choice of one for the embedding dimension is also due to simplicity: it is easily interpretable as the representation
+corresponding ReLU activation, we would actually recover a GLM structure where the link function is the output 
+activation. 
+The choice of one for the embedding dimension is also due to simplicity: it is easily interpretable as the 
+representation
 of each factor level as a point on the real number line, also, the trained embeddings are easily incorporated into a GLM
 which we will see in Model 3. In practice, the embedding dimension is a hyperparameter one can tune, for example via
 cross validation, and can vary for each variable. However, we also note that the choice of one for the 
 embedding output dimension is not an unreasonable one, especially when the cardinalities of the categorical variables
 are not unusually large.
 
+In Tables \@ref(tab:embeddings-occupancy-type) and \@ref(tab:embeddings-flood-zone), we show the learned embeddings
+for the `occupancy_type` and an excerpt of them for `flood_zone`. While it may be tempting to compare these values
+to those in Table \@ref(tab:relativities), they represent fundamentally different concepts. It is helpful to think
+of the embedding values for each variable as a continuous represention of the variable itself, rather than a 
+"coefficient" associated with the variable. Note that it is not straightforward to inspect the embeddings from a
+table and infer relationships to the response variable, even in a shallow network such as ours, due to nonlinearities
+within the model. Also note that we now have a way to incorporate the full granularity of the `flood_zone` variable,
+which is why more levels are shown in Table \@ref(tab:embeddings-flood-zone) as compared to Table 
+\@ref(tab:relativities). In Section TODO, we will discuss techniques to visualize these embeddings.
+
+Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type`.
+
+|level                                       | embedding|
+|:-------------------------------------------|---------:|
+|2 to 4 unit residential buidling            |      6.69|
+|Non-residential building                    |      7.16|
+|Residential building with more than 4 units |      6.33|
+|Single family residence                     |      5.43|
+
+Table: (\#tab:embeddings-flood-zone) Excerpt of learned embeddings for `flood_zone`.
+
+|level | embedding|level | embedding|level | embedding|level | embedding|level | embedding|
+|:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|
+|A     |      0.38|A09   |     -1.71|A18   |     -1.40|A99   |     -2.68|V     |     -0.41|
+|A00   |     -0.35|A0B   |      3.85|A19   |     -1.70|AE    |     -4.46|V02   |      0.65|
+|A01   |     -6.76|A10   |     -4.03|A20   |     -4.05|AH    |     -2.35|V03   |     -0.29|
+|A02   |     -4.28|A11   |     -5.32|A21   |     -2.08|AHB   |     -1.71|V04   |     -1.15|
+|A03   |     -5.93|A12   |     -3.23|A22   |     -2.11|AO    |     -6.07|V05   |     -0.50|
+|A04   |     -7.82|A13   |      2.03|A23   |     -1.40|AOB   |     -4.56|V06   |     -1.92|
+|A05   |     -3.42|A14   |     -5.72|A24   |      2.23|AR    |     -0.48|V07   |     -2.91|
+|A06   |     -4.97|A15   |     -3.67|A25   |      0.28|B     |     -5.36|V08   |     -2.24|
+|A07   |     -3.09|A16   |     -3.02|A27   |     -2.56|C     |     -4.47|V09   |     -0.75|
+|A08   |     -4.69|A17   |     -0.37|A30   |      1.13|D     |     -0.76|V10   |     -2.05|
 
 ### Model 3: GLM with Neural Network Embeddings
 

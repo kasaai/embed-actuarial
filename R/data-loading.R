@@ -6,7 +6,7 @@ small_data <- claims %>%
         amount_paid_on_building_claim > 0,
         total_building_insurance_coverage > 0
     ) %>%
-    sample_n(10000) %>%
+    sample_n(100000) %>%
     select(
         amount_paid_on_building_claim, total_building_insurance_coverage,
         reported_zip_code, primary_residence, basement_enclosure_crawlspace_type,
