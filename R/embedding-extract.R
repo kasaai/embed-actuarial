@@ -98,6 +98,19 @@ p2 <- embeddings$number_of_floors_in_the_insured_building %>%
     #     theme_void()
 p2
 ggsave("manuscript/images/num_floors.png", plot = p2, width = 8, height = 5)
+
+library(ggrepel)
+p3 <- embeddings$flood_zone %>%
+    filter(level != "new") %>%
+    mutate(prefix = substr(level, 1, 1)) %>%
+    ggplot(aes(e1, prefix, color = prefix, label = level)) +
+    geom_point() +
+    geom_label_repel() +
+    theme_bw()
+
+ggsave("manuscript/images/flood_zone.png", plot = p3, width = 8, height = 8)
+
+
 embeddings$flood_zone %>%
     mutate(prefix = substr(level, 1, 1)) %>%
     ggplot() +

@@ -657,11 +657,15 @@ helpful in explaining the concept to stakeholders.
 
 For Model 2, the neural network with one-dimensional embeddings, the task is simple: we can simply plot the levels
 on a line, as in Figure \@ref(fig:num-floors). In the case of `flood_zone`, since we happen to have the luxury of knowing a
-priori the meaning of the prefixes, we can plot them separately to see how the model mapped them. (TODO insert chart).
-(insert any observations).
+priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the model 
+mapped them.
 
 ```{r num-floors, echo=FALSE, fig.cap="Number of floors", out.width = "90%", fig.align="center"}
 knitr::include_graphics("images/num_floors.png")
+```
+
+```{r flood-zone, echo = FALSE, fig.cap="Flood zone embeddings", out.width = "80%", fig.align = "center"}
+knitr::include_graphics("images/flood_zone.png")
 ```
 
 For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before
@@ -673,16 +677,9 @@ neighbor embedding (t-SNE), both of which we illustrate below.
 
 ### t-SNE
 
+## Model Training and Results
 
-
-## Model Training and Results 
-
-To evaluate these baseline models and other models in this paper, we perform 10-fold 
-cross validation and compare the 
-root mean square error (RMSE) on the predicted and actual paid amounts.
-(somehwere we should say we're not doing a kaggle competition here and the performance metrics are really meant
-to show that the models aren't complete shit)
-(maybe a couple boxplots showing metrics for baseline models)
+(TODO)
 
 # Extending the model {#extend}
 
