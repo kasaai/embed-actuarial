@@ -641,24 +641,45 @@ Table: (\#tab:nn2-flood-zone) Learned embeddings for level `"A00"` of variable `
 |e9        |0.919  |e19       |-0.045 |e29       |0.707  |          |       |
 |e10       |-1.196 |e20       |0.467  |e30       |1.358  |          |       |
 
-## Model Training and Results 
+## Visualization Techniques for Interpretation {#interpretation}
 
-To evaluate these baseline models and other models in this paper, we perform 10-fold 
-cross validation and compare the 
-root mean square error (RMSE) on the predicted and actual paid amounts.
-(somehwere we should say we're not doing a kaggle competition here and the performance metrics are really meant
-to show that the models aren't complete shit)
-(maybe a couple boxplots showing metrics for baseline models)
+With AI and ML coming into the mainstream across industries and use cases, the topic of model explainability
+has received increasing attention. In insurance pricing, @kuo2020explainability propose a framework for
+model interpretability in the context of regulation and actuarial standards of practice, while @henckaerts2020boosting
+investigate algorithm-specific techniques to inspect tree-based models. @kuo2020explainability and references
+therein also discuss
+commonly utilized model-agnostic explanation techniques, such as permutation variable importance and partial
+dependence plots, that can be applied to the neural networks we consider in this paper.
 
-## Interpretations {#interpretation}
+In this section, we focus on ways to visualize the learned embeddings. In the authors' experiences, oftentimes
+the formats of the visualizations --- basic line and scatter plots --- even more so than the content of the data, is 
+helpful in explaining the concept to stakeholders.
 
-- model explainability is important in insurance
-- the more we can learn about how we arrive at our models the better
-- cite some existing work on explainable models in actuarial literature to show people care
-- refer back to some definitions from previous sections
-- show some embedding weights from our models - 1d line plot
-- (need a multidimensional embedding for this) do some pca/tsne
-- stress that relationship of embedding weights to response variable may be nonlinear depending on architecture
+For Model 2, the neural network with one-dimensional embeddings, the task is simple: we can simply plot the levels
+on a line, as in Figure \@ref(fig:num-floors). In the case of `flood_zone`, since we happen to have the luxury of knowing a
+priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the model 
+mapped them.
+
+```{r num-floors, echo=FALSE, fig.cap="Number of floors", out.width = "90%", fig.align="center"}
+knitr::include_graphics("images/num_floors.png")
+```
+
+```{r flood-zone, echo = FALSE, fig.cap="Flood zone embeddings", out.width = "80%", fig.align = "center"}
+knitr::include_graphics("images/flood_zone.png")
+```
+
+For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before
+we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than
+two dimensions. The standard approachs for this are principal component analysis (PCA) and t-distributed stochastic
+neighbor embedding (t-SNE), both of which we illustrate below.
+
+### PCA
+
+### t-SNE
+
+## Model Training and Results
+
+(TODO)
 
 # Extending the model {#extend}
 
