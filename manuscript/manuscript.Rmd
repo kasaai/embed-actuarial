@@ -23,8 +23,13 @@ header-includes: |
     \usepackage{mathtools}
     \usepackage{bm}
     \usepackage{bbm}
+    \usepackage{float}
     \DeclarePairedDelimiter\ceil{\lceil}{\rceil}
 ---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(fig.pos = "!h", out.extra = "")
+```
 
 # Introduction
 
@@ -82,8 +87,6 @@ transferred to a GLM model of the same data. Extensions to the modelling approac
 and we focus on attention based models in Section \ref{attention}. The interpretability of embedding layers is addressed
 in Section \ref{interpretation}. Finally, Section \ref{Conclusions} provides a discussion of the results of this paper
 and considers avenues for future research.
-
-(TODO: link to github repo)
 
 # Literature Review {#lit_review}
 
@@ -439,7 +442,7 @@ In this subsection, we develop the following models:
 4. A neural network with multidimensional categorical embeddings.
 
 These model architectures are relatively uncomplicated by today's standards, and are so chosen to better highlight the
-embedding components. Later, in Section X (TODO), we will investigate more involved architectures utilizing embeddings
+embedding components. Later, in Section \ref{attn}, we will investigate more involved architectures utilizing embeddings
 that represent the state of the art for modeling tabular data.
 
 
@@ -506,13 +509,18 @@ Table: (\#tab:relativities) Excerpt of relativities for Model 1.
 For Model 2, we build a feedforward neural network, whose architecture is shown in Figure \@ref(fig:nn-1). 
 The categorical inputs go through one-dimensional embedding
 layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which
-have been normalized in data pre-processing, before being sent to a hidden linear layer of 64 units. A ReLU (TODO: reference an equation in prev. section) activation
+have been normalized in data pre-processing, before being sent to a hidden linear layer of 64 units. A ReLU activation,
+
+\begin{equation}
+x \mapsto \max(0, x),
+\end{equation}
+
 is then applied to the outputs before they are sent to a final output layer resulting in a scalar. To constrain
 predictions to be positive, we apply softplus activation, which is defined to be
 
-$$
+\begin{equation}
 x \mapsto \log(1 + e^x). 
-$$
+\end{equation}
 
 ```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
@@ -537,7 +545,7 @@ of the embedding values for each variable as a continuous represention of the va
 table and infer relationships to the response variable, even in a shallow network such as ours, due to nonlinearities
 within the model. Also note that we now have a way to incorporate the full granularity of the `flood_zone` variable,
 which is why more levels are shown in Table \@ref(tab:embeddings-flood-zone) as compared to Table 
-\@ref(tab:relativities). In Section TODO, we will discuss techniques to visualize these embeddings.
+\@ref(tab:relativities). In Section \ref{interpretation}, we will discuss techniques to visualize these embeddings.
 
 Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type`.
 
@@ -660,11 +668,11 @@ on a line, as in Figure \@ref(fig:num-floors). In the case of `flood_zone`, sinc
 priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the model 
 mapped them.
 
-```{r num-floors, echo=FALSE, fig.cap="Number of floors", out.width = "90%", fig.align="center"}
+```{r num-floors, echo=FALSE, fig.cap="Number of floors", out.width = "80%", fig.align="center"}
 knitr::include_graphics("images/num_floors.png")
 ```
 
-```{r flood-zone, echo = FALSE, fig.cap="Flood zone embeddings", out.width = "80%", fig.align = "center"}
+```{r flood-zone, echo = FALSE, fig.cap="Flood zone embeddings", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone.png")
 ```
 
@@ -675,9 +683,22 @@ neighbor embedding (t-SNE), both of which we illustrate below.
 
 ### PCA
 
+(TODO: insert brief theoretical stuff). See Figure \@ref(fig:flood-zone-pca).
+
+```{r flood-zone-pca, echo = FALSE, fig.cap="Flood zone PCA", out.width = "60%", fig.align = "center"}
+knitr::include_graphics("images/flood_zone_pca.png")
+```
+
+
 ### t-SNE
 
-## Model Training and Results
+(TODO: insert brief theoretical stuff). See Figure \@ref(fig:flood-zone-tsne).
+
+```{r flood-zone-tsne, echo = FALSE, fig.cap="Flood zone t-SNE", out.width = "60%", fig.align = "center"}
+knitr::include_graphics("images/flood_zone_tsne.png")
+```
+
+## Training and Inference
 
 (TODO)
 
@@ -688,7 +709,7 @@ categorical variables (Can the modelling of numerical variables benefit from the
 should this best be done? CatBoost - cut into 256 groups smoothness Map numeric to a dense layer and use that as 
 embedding - basis expansion Add a distribution to the embeddings Can insights from credibility theory lead to enhanced embeddings? Take credibility mixture over embeddings Cluster embeddings PCA of embeddings
 
-# Attention based modelling
+# Attention based modelling {#attn}
 
 Can we get some lift by adding attention layers? TabNet model Transformer model
 
@@ -702,3 +723,7 @@ knitr::include_graphics("images/masks.png")
 # Conclusions {#Conclusions}
 
 Conclusions
+
+\newpage
+
+# References {.unnumbered}

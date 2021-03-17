@@ -1,4 +1,4 @@
-model <- cv_results[[1]]$model_nn
+model <- cv_results[[1]]$model_nn2
 level_integer_mappings <- cv_results[[1]]$rec_nn$steps[[3]]$key %>%
     lapply(function(x) mutate(x, integer = as.integer(integer + 1L)))
 
@@ -123,27 +123,48 @@ embeddings$state %>%
 
 embeddings$flood_zone %>% dim()
 
+
+####### PCA stuff
+
+
+embeddings$flood_zone %>% str()
+
 lbls <- embeddings$flood_zone$level
 wts <- embeddings$flood_zone %>%
     select(starts_with("e")) %>%
     as.matrix()
-pca <- prcomp(wts, center = TRUE, scale. = TRUE, rank = 3)$x[, c("PC1", "PC2", "PC3")] %>%
+
+pca <- prcomp(wts, center = TRUE, scale. = TRUE, rank = 2)$x[, c("PC1", "PC2")] %>%
     as.data.frame()
 
-library(ggrepel)
 
 ggplot(data = pca, aes(x = PC1, y = PC2)) +
     geom_point()
-
-rayshader::plot_gg(ggp)
-
-pca %>%
+library(ggrepel)
+p4 <- pca %>%
     as.data.frame() %>%
     mutate(class = lbls) %>%
     mutate(prefix = substr(lbls, 1, 1)) %>%
+    filter(class != "new") %>% 
     ggplot(aes(x = PC1, y = PC2, color = prefix)) +
     geom_point() +
     geom_label_repel(aes(label = class)) +
-    coord_cartesian(xlim = c(-2, 2), ylim = c(-2, 2)) +
-    theme(aspect.ratio = 1) +
+    # coord_cartesian(xlim = c(-2, 2), ylim = c(-2, 2)) +
+    # theme(aspect.ratio = 1) +
     theme_classic()
+
+ggsave("manuscript/images/flood_zone_pca.png", plot = p4)
+
+library(Rtsne)
+tsne_out <- Rtsne::Rtsne(wts, perplexity = 5)
+p5 <- tsne_out$Y %>%
+    as.data.frame() %>%
+    mutate(class = lbls) %>%
+    mutate(prefix = substr(lbls, 1, 1)) %>%
+    filter(class != "new") %>%
+    ggplot(aes(x = V1, y = V2, color = prefix)) +
+    geom_point() +
+    geom_label_repel(aes(label = class)) +
+    theme_classic()
+
+ggsave("manuscript/images/flood_zone_tsne.png", plot = p5)
