@@ -382,10 +382,9 @@ Finally, a linear combination of $V$ is formed:
 # Predictive Modeling with Embeddings
 
 In this section, we walk through a simple predictive modeling exercise in order to illustrate the application of 
-embeddings. First, we pose a supervised regression problem, based on flood insurance claims severity. We then describe, 
-fit, and evaluate GLMs and neural networks utilizing embeddings for this problem. Finally, we discuss visualization 
-techniques for model interpretation. As we proceed, we also incorporate practical technical guidance on modeling
-procedure.
+embeddings. First, we pose a supervised regression problem, based on flood insurance claims severity. We then develop 
+GLMs and neural networks utilizing embeddings for this problem, and inspect the trained parameters. Finally, we
+provide details of model optimization, inference, and performance.
 
 ## Problem Description and Experiment Setup
 
@@ -394,10 +393,12 @@ on the property coverage of the policy. The data we use comes from the National 
 made available by the OpenFEMA initiative 
 of the Federal Emergency Management Agency (FEMA)[^9]. Two datasets are made available by OpenFEMA: A policies dataset 
 with exposure information, and a claims dataset with claims transactions, including paid amounts. Because there is no 
-way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While the 
+way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While 
+the 
 complete dataset contains over two million transactions, for the purposes of our experiments we limit ourselves to data 
 from 2000 to August 2019, which amounts to approximately 1.4 million claims. The dataset can be downloaded from 
-Cellar[^10] The dataset includes a rich variety of variables, from occupancy type to coarse coordinates. For our models, 
+Cellar[^10] The dataset includes a rich variety of variables, from occupancy type to coarse coordinates. For our 
+models, 
 we work with a few selected variables that represent continuous and discrete variables of low and high cardinalities, 
 which we list in Table \@ref(tab:variables)
 
@@ -418,7 +419,7 @@ variables <- tibble::tribble(
 )
 knitr::kable(
   variables,
-  caption = "Predicator variables.",
+  caption = "Predictor variables.",
   booktabs = TRUE,
   table.env = "table",
   escape = FALSE,
@@ -429,10 +430,19 @@ knitr::kable(
 
 The response variable we take from the dataset is "Amount Paid on Building Claim", which is a numeric variable.
 
-(talk about experiment setup -- we take a subset of data that's shared for all models, then for the CV performance
-evaluation only we use all data in CV splits?)
+For our experiments, we set up a 10-fold cross validation scheme that is applied to each of the models
+we introduce. In Sections \ref{models} and \ref{interpretations}, the tables and figures are based on a single fold of 
+the cross validation split. In Section \ref{training-inference}, we provide the cross-validated performance
+metrics of each of the models.
 
-## Models
+We note that the focus of our contribution is on applications of categorical embeddings in predictive modeling, 
+rather than
+on fine-tuning models in order to beat or establish a benchmark. To this end, we do not perform systematic
+hyperparameter tuning in our experiments, and the performance metrics are provided to show that reasonable
+models utilizing categorical embeddings. However, as we describe the modeling procedure and results, we provide
+commentary on recommended practices in practical applications, especially with respect to the neural network models.
+
+## Models {#models}
 
 In this subsection, we develop the following models:
 
@@ -444,8 +454,6 @@ In this subsection, we develop the following models:
 These model architectures are relatively uncomplicated by today's standards, and are so chosen to better highlight the
 embedding components. Later, in Section \ref{attn}, we will investigate more involved architectures utilizing embeddings
 that represent the state of the art for modeling tabular data.
-
-
 
 ### Model 1: GLM 
 
@@ -698,9 +706,22 @@ knitr::include_graphics("images/flood_zone_pca.png")
 knitr::include_graphics("images/flood_zone_tsne.png")
 ```
 
-## Training and Inference
+## Training and Inference {#training-inference}
 
-(TODO)
+For the GLMs, Models 1 and 3, we follow the standard optimization procedure using iteratively reweighted least 
+squares (IWLS) without regularization. For the neural networks, Models 2 and 4, we utilize the \texttt{Adam}
+optimizer [@Kingma2014] with a learning rate of TODO, and train the each network for TODO epochs with a batch
+size of TODO.
+
+During inference, or scoring, care must be taken to accommodate the categorical levels that are unseen
+during training. While we allow for an extra key in the embedding dictionary (TODO: mention this earlier), the initial
+weights are not updated during training, which could lead to nonsensical predictions in the validation or test sets. To
+circumvent this issue, before applying the trained model but after the final optimization epoch, we update the weights
+for the unseen levels manually. In practice, a common approach is to take an average value 
+of some sort of the weights of theother levels. In our case, we take the median (if there are multiple, the lower of
+the two), but a mean, mean weighted by frequency of observations, or trimmed mean could be used.
+
+In Table TODO, we exhibit the cross-validated performance metrics of each of the models.
 
 # Extending the model {#extend}
 
