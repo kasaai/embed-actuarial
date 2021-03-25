@@ -327,7 +327,8 @@ where we represent the output of embedding layers concatenated together with any
 
 ### Attention {#attention}
 
-Attention mechanisms have been widely applied within the deep learning literature to give more flexibility to RNNs [@Bahdanau2015a] and subsequently as a replacement for FCNs in the so-called Transformer architecture, which is now widely used in natural language processing [@Vaswani2017a], and, more recently, has been applied to computer vision and tabular modelling tasks. Attention mechanisms allow deep neural nets to weight the covariates entering the model in a flexible manner; these types of applications are demonstrated in, for example, [@Vaswani2017a]. In this section we provide an introduction to attention mechanisms and then discuss applications of attention to modeling tabular data.
+
+Attention mechanisms have been widely applied within the deep learning literature to give more flexibility to RNNs [@Bahdanau2015a] and subsequently as a replacement for FCNs in the so-called Transformer architecture, which is now widely used in natural language processing [@Vaswani2017a], and, more recently, has been applied to computer vision and tabular modelling tasks. Attention mechanisms allow deep neural nets to weight the covariates entering the model in a flexible manner; these types of applications are demonstrated in, for example, [@Vaswani2017a]. In this section we provide a theoretical introduction to attention mechanisms and then discuss applications of attention to modeling tabular data. In the following sections of this paper, we then consider whether adding attention to an model that uses embeddings can provide better predictive accuracy.
 
 An attention mechanism is a mapping:
 
@@ -338,7 +339,9 @@ A: \mathbb{R}^{(q \times d) \times (q \times d) \times (q \times d)} \to \mathbb
 \label{eq:attention}
 \end{equation}
 ```
-where $Q \in \mathbb{R}^{q \times d}$ is a matrix of query vectors, $K \in \mathbb{R}^{q \times d}$ is a matrix of key vectors, $V \in \mathbb{R}^{q \times d}$ is a matrix of value vectors and $V^* \in \mathbb{R}^{q \times d}$, the output of the attention mechanism, is a new matrix of values. Several different options for the mapping \eqref{eq:attention} exist in the literature; here we describe the self-attention mechanism used in [@Vaswani2017a]. In more detail, consider that $V$ is a matrix of covariates relating to a regression problem, which, in the case of tabular data, will usually be composed of embeddings of the same dimension for several different categorical or numerical variables; in the case discussed here we have $q$ covariates in the form of embeddings of dimension $d$. We wish to apply the attention mechanism to $V$ to assign weights to the most important embeddings for the regression problem; this is done from the \`\`perspective" of each covariate in $V$. To do this, we formulate the query matrix $Q$ which contains information about the regression problem at hand; this is usually done by passing $V$ through a FCN trained to derive queries from the covariates. Similarly, the matrix $K$ contains the relevance of each row of $V$ for the regression problem and is also usually derived by passing each row of $V$ through another FCN. Finally, the matrix $V$ can be processed with a third FCN or left as is. The first step of the attention mechanism is to derive a matrix $A \in \mathbb{R}^{q \times q}$ of attention scores:
+where $Q \in \mathbb{R}^{q \times d}$ is a matrix of query vectors, $K \in \mathbb{R}^{q \times d}$ is a matrix of key vectors, $X' \in \mathbb{R}^{q \times d}$ is a matrix of value vectors and $X^* \in \mathbb{R}^{q \times d}$, the output of the attention mechanism, is a new matrix of values. Several different options for the mapping \eqref{eq:attention} exist in the literature; here we describe the self-attention mechanism used in [@Vaswani2017a]. In more detail, consider that $X'$ is a matrix of covariates relating to a regression problem, which, in the case of tabular data, will usually be composed of embeddings of the same dimension for several different categorical or numerical variables; in the case discussed here we have $q$ covariates in the form of embeddings of dimension $d$. For clarity, note that in Equation \ref{eq:embed_to_nn} we have used the symbol $X'$ to denote the vector of embeddings and numerical inputs which is passed into the neural network. In what follows, we now use the symbol $X'$ to refer to the matrix of embeddings of dimension $q \times d$.
+
+We wish to apply the attention mechanism to $X'$ to assign weights to the most important embeddings for the regression problem; this is done from the \`\`perspective" of each covariate in $x'$. To do this, we formulate the query matrix $Q$ which contains information about the regression problem at hand; this is usually done by passing $X'$ through a FCN trained to derive queries from the covariates. Similarly, the matrix $K$ contains the relevance of each row of $V$ for the regression problem and is also usually derived by passing each row of $X'$ through another FCN. Finally, the matrix $X'$can be processed with a third FCN or left as is. The first step of the attention mechanism is to derive a matrix $A \in \mathbb{R}^{q \times q}$ of attention scores:
 
 ```{=latex}
 \begin{equation}
@@ -354,12 +357,12 @@ The attention scores $A$ are then normalized, or made to sum to unity, across th
 A^*_{i,j} = \frac{e^{(A_{i,j})}}{\sum_{n=1}^{q} e^{(A_{i,n})}}.
 \end{equation}
 ```
-Finally, a linear combination of $V$ is formed to give the new matrix of covariates $V^*$:
+Finally, a linear combination of $X'$ is formed to give the new matrix of covariates $X^*$:
 
 ```{=latex}
 \begin{equation}
 \mathbb{R}^{(q \times q) \times (q \times d)} \to \mathbb{R}^{q \times d}, ~~
-(A^*, V) ~\mapsto ~ V^* = A^*~V.
+(A^*, x') ~\mapsto ~ X^* = A^*~X'.
 \label{eq:attention_output}
 \end{equation}
 ```
@@ -369,7 +372,9 @@ An intuitive explanation of the attention formula is as follows: we start by con
 
 ### Transformer models
 
-Self-attention is the main building block of the current state of the art model for natural language processing, which is the Transformer model [@Vaswani2017]. The basic Transformer model applies self-attention to the covariate matrix, $X'$ which is fed into the model, to produce a new matrix of covariates, $X^*$. The two matrices are added (in an element-wise manner) together and then normalized. This matrix is then further processed through a neural network and subsequently, these processed covariates are used in the machine learning task. The Transformer model is much more accurate on NLP tasks comapred to using the raw covariates before processing with a Transformer, to the extent that this model now underlies most NLP applications that use deep learning.
+Self-attention is the main building block of the current state of the art model for natural language processing, which is the Transformer model [@Vaswani2017]. The basic Transformer model applies a self-attention to the covariate matrix, $X'$ which is fed into the model, to produce a new matrix of covariates, $X^*$. These two matrices, the input matrix $X'$ and the output matrix $X^*$ are added (in an element-wise manner) together and then normalized. This matrix is then further processed through a neural network and subsequently, these processed covariates are used in the machine learning task.
+
+The Transformer model is much more accurate on NLP tasks comapred to using the raw covariates before processing with a Transformer, to the extent that this model now underlies most NLP applications that use deep learning.
 
 ### Attention Modelling for Tabular Data
 
@@ -384,7 +389,9 @@ Several different approaches to applying attention within the modelling of tabul
 ```
 where $X' \in \mathbb{R}^{q \times d}$ is the matrix of embeddings after concatenating $q$ embeddings of dimension $d$ together and $X^*$ represents the matrix of embeddings $X'$ after processing with attention. Below, we demonstrate the effect of adding this simple application of attention to a tabular model.
 
-[@Huang2020] refines this approach in a model they call the TabTransformer.
+[@Huang2020] refines this approach in a model they call the TabTransformer, which implements two main changes to the approach shown in Equations \ref{eq:embed_to_attn_to_nn}. The first of these is that, instead of using the matrix of embeddings after processing with self-attention ($X'$) directly in the model, the output of a Transformer model is used instead. The second of these refinements is that for each of the $q$ covariates with an embedding in the matrix $X'$, we include a new row embedding which denotes which covariate each embedding relates to. Thus, in the TabTransformer model, we augment the embedding matrix with extra columns, so that the dimension of this matrix is $q \times (d + d_col)$, where $d_col$ is the dimension of the row embedding. [@Huang2020] find that including this identifier improves the performance of the model. We compare the results of the TabTransformer model to the other models tested below.
+
+Finally, a different way of incorporating attention into the modeling of tabular data has been proposed by [@Ark2019], who refer to their model as TabNet.
 
 # Predictive Modeling with Embeddings
 
