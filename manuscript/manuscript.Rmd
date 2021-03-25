@@ -373,9 +373,9 @@ An intuitive explanation of the attention formula is as follows: we start by con
 
 ### Transformer models
 
-Self-attention is the main building block of the current state of the art model for natural language processing, which is the Transformer model [@Vaswani2017]. The basic Transformer model applies a self-attention to the covariate matrix, $X'$ which is fed into the model, to produce a new matrix of covariates, $X^*$. These two matrices, the input matrix $X'$ and the output matrix $X^*$ are added (in an element-wise manner) together and then normalized. This matrix is then further processed through a neural network and subsequently, these processed covariates are used in the machine learning task.
+Self-attention is the main building block of the current state of the art model for natural language processing, which is the Transformer model [@Vaswani2017]. A basic Transformer model applies self-attention to the covariate matrix, $X'$ which is fed into the model, to produce a new matrix of covariates, $X^*$. These two matrices, the input matrix $X'$ and the output matrix $X^*$ are added (in an element-wise manner) together and then normalized. This matrix is then further processed through a neural network and subsequently, these processed covariates are used in the machine learning task. Multiple Tranformer network "blocks" can be added to a network to create a deep Transformer network.
 
-The Transformer model is much more accurate on NLP tasks comapred to using the raw covariates before processing with a Transformer, to the extent that this model now underlies most NLP applications that use deep learning.
+The Transformer model is much more accurate on NLP tasks compared to using the raw covariates before processing with a Transformer, to the extent that this model now underlies most NLP applications that use deep learning.
 
 ### Attention Modelling for Tabular Data
 
