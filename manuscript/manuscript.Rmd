@@ -328,7 +328,7 @@ where we represent the output of embedding layers concatenated together with any
 ### Attention {#attention}
 
 
-Attention mechanisms have been widely applied within the deep learning literature to give more flexibility to RNNs [@Bahdanau2015a] and subsequently as a replacement for FCNs in the so-called Transformer architecture, which is now widely used in natural language processing [@Vaswani2017a], and, more recently, has been applied to computer vision and tabular modelling tasks. Attention mechanisms allow deep neural nets to weight the covariates entering the model in a flexible manner; these types of applications are demonstrated in, for example, [@Vaswani2017a]. In this section we provide a theoretical introduction to attention mechanisms and then discuss applications of attention to modeling tabular data. In the following sections of this paper, we then consider whether adding attention to an model that uses embeddings can provide better predictive accuracy.
+Attention mechanisms have been widely applied within the deep learning literature to give more flexibility to RNNs [@Bahdanau2015a] and subsequently as a replacement for FCNs in the so-called Transformer architecture, which is now widely used in natural language processing [@Vaswani2017a], and, more recently, has been applied to computer vision and tabular modelling tasks. Attention mechanisms allow deep neural nets to weight the covariates entering the model in a flexible manner; these types of applications are demonstrated in, for example, [@Vaswani2017a]. In this section we provide a theoretical introduction to attention mechanisms and then discuss applications of attention to modeling tabular data. In the following sections of this paper, we then consider whether adding attention to an model that uses embeddings can provide better predictive accuracy. The following is intended as a high level review of some of the relevant theory behind attention based approaches; for more technical details the sources quoted in this section can be consulted.
 
 An attention mechanism is a mapping:
 
@@ -350,11 +350,12 @@ We wish to apply the attention mechanism to $X'$ to assign weights to the most i
 \label{eq:attention_scores}
 \end{equation}
 ```
-The attention scores $A$ are then normalized, or made to sum to unity, across the columns of $A$ using a soft max function i.e.
+The attention scores $A$ are then normalized, or made to sum to unity, across the columns of $A$ using a so-called softmax function i.e.
 
 ```{=latex}
 \begin{equation}
 A^*_{i,j} = \frac{e^{(A_{i,j})}}{\sum_{n=1}^{q} e^{(A_{i,n})}}.
+\label{eq:softmax}
 \end{equation}
 ```
 Finally, a linear combination of $X'$ is formed to give the new matrix of covariates $X^*$:
@@ -391,7 +392,7 @@ where $X' \in \mathbb{R}^{q \times d}$ is the matrix of embeddings after concate
 
 [@Huang2020] refines this approach in a model they call the TabTransformer, which implements two main changes to the approach shown in Equations \ref{eq:embed_to_attn_to_nn}. The first of these is that, instead of using the matrix of embeddings after processing with self-attention ($X'$) directly in the model, the output of a Transformer model is used instead. The second of these refinements is that for each of the $q$ covariates with an embedding in the matrix $X'$, we include a new row embedding which denotes which covariate each embedding relates to. Thus, in the TabTransformer model, we augment the embedding matrix with extra columns, so that the dimension of this matrix is $q \times (d + d_col)$, where $d_col$ is the dimension of the row embedding. [@Huang2020] find that including this identifier improves the performance of the model. We compare the results of the TabTransformer model to the other models tested below.
 
-Finally, a different way of incorporating attention into the modeling of tabular data has been proposed by [@Ark2019], who refer to their model as TabNet.
+Finally, a different way of incorporating attention into the modeling of tabular data has been proposed by [@Ark2019], who refer to their model as TabNet. In summary, the main idea of the TabNet model is to try emulate the excellent performance of decision trees on tabular data modelling using deep neural networks. This is done by structuring the neural networks to emulate a key aspect of decision tree modelling, which is the efficient selection of relevant covariates for the model task. Within TabNet, an attention based model is used to select features by estimating attention scores for each covariate within $X$. The covariates are multiplied by the attention scores to downweight less relevant features for the prediction problem. 
 
 # Predictive Modeling with Embeddings
 
