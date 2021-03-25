@@ -85,6 +85,40 @@ simple_net <- nn_module(
     }
 )
 
+
+simple_net_attn <- nn_module(
+    "simple_net_attn",
+    initialize = function(cardinalities,
+                          num_numerical,
+                          units = 16,
+                          embed_dim = 5,
+                          fn_embedding_dim = function(x) embed_dim) {
+        self$embedder <- embedding_module_attn(cardinalities, fn_embedding_dim)
+        sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
+            sum()
+        self$embed_dim = fn_embedding_dim()
+        self$attn <- nn_multihead_attention(embed_dim = 5, num_heads = 1)
+        self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
+        self$output <- nn_linear(units, 1)
+        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+        self$to(device = device)
+    },
+    forward = function(xcat, xnum) {
+        embedded <- self$embedder(xcat)
+        shapes = embedded$shape
+        embedded_reshape = embedded$view(list(embedded$shape[1],self$embed_dim,self$embed_dim))
+        embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
+        embedded_attended <- embedded_attended[[1]]
+        embedded_attended = embedded_attended$view(list(embedded$shape[1],self$embed_dim * self$embed_dim))
+        all <- torch_cat(list(embedded_attended, xnum$to(dtype = torch_float())), dim = 2)
+        all %>%
+            self$fc() %>%
+            nnf_relu() %>%
+            self$output() %>%
+            nnf_softplus()
+    }
+)
+
 train_loop_alternate <- function(model, train_dl, valid_dl, epochs, optimizer) {
     for (epoch in seq_len(epochs)) {
         model$train()
@@ -211,7 +245,7 @@ key_with_embeddings <- function(embeddings, key) {
                 `+`(1L) %>%
                 torch_tensor(dtype = torch_int(), device = device) %>%
                 embedder() %>%
-                (function(x) x$to(device = "cpu")) %>% 
+                (function(x) x$to(device = "cpu")) %>%
                 as.numeric()
             key[["embedding"]] <- embedding
             key
