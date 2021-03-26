@@ -93,11 +93,11 @@ simple_net_attn <- nn_module(
                           units = 16,
                           embed_dim = 5,
                           fn_embedding_dim = function(x) embed_dim) {
-        self$embedder <- embedding_module_attn(cardinalities, fn_embedding_dim)
+        self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
         self$embed_dim = fn_embedding_dim()
-        self$attn <- nn_multihead_attention(embed_dim = 5, num_heads = 1)
+        self$attn <- nn_multihead_attention(embed_dim = embed_dim, num_heads = 1)
         self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
         self$output <- nn_linear(units, 1)
         device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
@@ -118,6 +118,61 @@ simple_net_attn <- nn_module(
             nnf_softplus()
     }
 )
+
+
+simple_net_tabtrans <- nn_module(
+    "simple_net_tabtrans",
+    initialize = function(cardinalities,
+                          num_numerical,
+                          units = 16,
+                          embed_dim = 5,
+                          fn_embedding_dim = function(x) embed_dim) {
+        self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
+        sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
+            sum()
+        self$embed_dim = fn_embedding_dim()
+
+        self$attn <- nn_multihead_attention(embed_dim = embed_dim, num_heads = 1)
+
+        self$linear1 = nn_linear(embed_dim, units*4)
+        self$dropout = nn_dropout(0.05)
+        self$linear2 = nn_linear(units*4, embed_dim)
+        self$norm1 = nn_layer_norm(embed_dim)
+        self$norm2 = nn_layer_norm(embed_dim)
+        self$dropout1 = nn_dropout(0.05)
+        self$dropout2 = nn_dropout(0.05)
+        self$activation = nn_relu()
+
+
+        self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
+        self$output <- nn_linear(units, 1)
+        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+        self$to(device = device)
+    },
+    forward = function(xcat, xnum) {
+        embedded <- self$embedder(xcat)
+        shapes = embedded$shape
+        embedded_reshape = embedded$view(list(embedded$shape[1],self$embed_dim,self$embed_dim))
+        embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
+        embedded_attended <- embedded_attended[[1]]
+
+        embedded_reshape = embedded_reshape + self$dropout1(embedded_attended)
+        embedded_reshape = self$norm1(embedded_reshape)
+
+        embedded_attended = self$linear2(self$dropout(self$activation(self$linear1(embedded_reshape))))
+        embedded_reshape = embedded_reshape + self$dropout2(embedded_attended)
+        embedded_reshape = self$norm2(embedded_reshape)
+
+        embedded_reshape = embedded_reshape$view(list(embedded$shape[1],self$embed_dim * self$embed_dim))
+        all <- torch_cat(list(embedded_reshape, xnum$to(dtype = torch_float())), dim = 2)
+        all %>%
+            self$fc() %>%
+            nnf_relu() %>%
+            self$output() %>%
+            nnf_softplus()
+    }
+)
+
 
 train_loop_alternate <- function(model, train_dl, valid_dl, epochs, optimizer) {
     for (epoch in seq_len(epochs)) {
