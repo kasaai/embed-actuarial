@@ -255,3 +255,83 @@ key_with_embeddings <- function(embeddings, key) {
     ) %>%
         setNames(names(key))
 }
+
+embedding_with_position <- nn_module(
+    initialize = function(cardinalities, embedding_dim = 2, max_norm = NULL, norm_type = 2) {
+        self$embeddings <- nn_module_list(lapply(
+            cardinalities,
+            function(x) {
+                nn_embedding(
+                    num_embeddings = x, embedding_dim = embedding_dim,
+                    max_norm = max_norm, norm_type = norm_type
+                )
+            }
+        ))
+
+        self$position_embeddings <- nn_parameter(
+            torch_zeros(c(1, length(cardinalities), 1)),
+            requires_grad = TRUE
+        )
+        self
+    },
+    forward = function(x) {
+        embedded <- vector(mode = "list", length = length(self$embeddings))
+        for (i in seq_along(self$embeddings)) {
+            embedded[[i]] <- self$embeddings[[i]](x[, i])
+        }
+        torch_cat(list(
+            torch_stack(embedded, dim = 2),
+            torch_repeat_interleave(self$position_embeddings, 
+                torch_tensor(x$size()[[1]], dtype = torch_long())$to(device = "cuda"),
+                dim = 1
+            )
+        ), dim = 3)
+    }
+)
+
+mlp <- nn_module(
+    "mlp",
+    initialize = function(in_dim, fc_units) {
+        self$linear1 <- nn_linear(in_dim, fc_units)
+        self$linear2 <- nn_linear(fc_units, 1)
+    },
+    forward = function(x) {
+        x %>%
+            self$linear1() %>%
+            nnf_relu() %>% 
+            self$linear2()
+    }
+)
+
+tabtransformer <- nn_module(
+    "tabtransformer",
+    initialize = function(cardinalities, num_numerical, embedding_dim = 2, num_heads = 3, fc_units = 32) {
+        self$col_embedder <- embedding_with_position(cardinalities, embedding_dim)
+        self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads)
+        self$lnorm1 <- nn_layer_norm(embedding_dim + 1)
+        self$lnorm2 <- nn_layer_norm(embedding_dim + 1)
+        self$linear1 <- nn_linear(embedding_dim + 1, 4 * (embedding_dim + 1))
+        self$linear2 <- nn_linear(4 * (embedding_dim + 1), (embedding_dim + 1))
+        self$mlp1 <- mlp(length(cardinalities) * (embedding_dim + 1) + num_numerical, fc_units)
+        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+        # self$to(device = device)
+        self
+    },
+    forward = function(xcat, xnum) {
+        xcat_out <- self$col_embedder(xcat)
+        xcat_out <- self$attn(xcat_out, xcat_out, xcat_out)[[1]] + xcat_out
+        xcat_out <- self$lnorm1(xcat_out)
+        xcat_out_a <- xcat_out %>%
+            self$linear1() %>%
+            nnf_relu() %>%
+            self$linear2()
+        xcat_out <- self$lnorm2(xcat_out + xcat_out_a)
+        xcat_out <- xcat_out$view(c(-1, xcat_out$size(2) * xcat_out$size(3)))
+        concat <- torch_cat(list(xcat_out, xnum), dim = 2)
+        self$mlp1(concat)
+    }
+)
+
+rmse <- function(actuals, preds) {
+    sqrt(sum((actuals - preds)^2) / length(actuals))
+}
