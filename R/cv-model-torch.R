@@ -17,7 +17,7 @@ response_col <- "amount_paid_on_building_claim"
 
 
 cvfolds <- small_data %>%
-    rsample::vfold_cv(v = 5)
+    rsample::vfold_cv(v = 2)
 # cvfolds
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
@@ -72,18 +72,31 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     preds_nn2 <- get_preds(model2, test_dl)
 
+
+    model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
+        embedding_dim = 2, num_heads = 3, fc_units = 32
+    )
+    model_tabt <- model_tabt$to(device = "cuda")
+
+    optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
+
+    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer)
+
+    replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
+
+    preds_tabt <- get_preds(model_tabt, test_dl)
     ### add simple attn model
 
-    model_attn <- simple_net_attn(env$cardinalities, length(numeric_cols), units = 64, embed_dim = 5)
+    # model_attn <- simple_net_attn(env$cardinalities, length(numeric_cols), units = 64, embed_dim = 5)
 
-    optimizer <- optim_adam(model_attn$parameters, lr = learning_rate, weight_decay = 0)
+    # optimizer <- optim_adam(model_attn$parameters, lr = learning_rate, weight_decay = 0)
     # optimizer <- optim_rmsprop(model$parameters, lr = 0.1)
 
-    train_loop(model_attn, train_dl, valid_dl, epochs, optimizer)
+    # train_loop(model_attn, train_dl, valid_dl, epochs, optimizer)
 
-    replace_unseen_level_weights_(model$embedder$embeddings)
+    # replace_unseen_level_weights_(model$embedder$embeddings)
 
-    preds_nn_attn <- get_preds(model_attn, test_dl)
+    # preds_nn_attn <- get_preds(model_attn, test_dl)
 
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
@@ -128,7 +141,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     list(
         model_nn = model,
         model_nn2 = model2,
-        model_attn = model_attn,
+        model_tabt = model_tabt,
         rec_nn = rec_nn,
         model_glm = model_glm,
         rec_glm = rec_glm,
@@ -137,7 +150,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         actuals = actuals,
         preds_nn = preds_nn,
         preds_nn2 = preds_nn2,
-        preds_nn_attn = preds_nn_attn,
+        preds_tabt = preds_tabt,
         preds_glm = preds_glm,
         preds_glm2 = preds_glm2
     )
@@ -149,10 +162,10 @@ cv_results <- cvfolds$splits %>%
 cv_results %>%
     map(function(x) {
         list(
-            rmse_nn = sqrt(sum((x$actuals - x$preds_nn)^2) / length(x$actuals)),
-            rmse_nn2 = sqrt(sum((x$actuals - x$preds_nn2)^2) / length(x$actuals)),
-            rmse_nn_attn = sqrt(sum((x$actuals - x$preds_nn_attn)^2) / length(x$actuals)),
-            rmse_glm = sqrt(sum((x$actuals - x$preds_glm)^2) / length(x$actuals)),
-            rmse_glm2 = sqrt(sum((x$actuals - x$preds_glm2)^2) / length(x$actuals))
+            rmse_nn = rmse(x$actuals, x$preds_nn),
+            rmse_nn2 = rmse(x$actuals, x$preds_nn2),
+            rmse_tabt = rmse(x$actuals, x$preds_tabt),
+            rmse_glm = rmse(x$actuals, x$preds_glm),
+            rmse_glm2 = rmse(x$actuals, x$preds_glm2)
         )
     })
