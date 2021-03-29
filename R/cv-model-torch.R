@@ -15,9 +15,8 @@ categorical_cols <- c(
 numeric_cols <- c("total_building_insurance_coverage", "community_rating_system_discount")
 response_col <- "amount_paid_on_building_claim"
 
-
 cvfolds <- small_data %>%
-    rsample::vfold_cv(v = 10)
+    rsample::vfold_cv(v = 2)
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
@@ -152,3 +151,10 @@ cv_results %>%
             rmse_glm2 = rmse(x$actuals, x$preds_glm2)
         )
     })
+
+dir.create("model_files")
+saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
+saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
+saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
+torch_save(cv_results[[1]]$model_nn, "model_files/nn1.pt")
+torch_save(cv_results[[1]]$model_nn2, "model_files/nn2.pt")
