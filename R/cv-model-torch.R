@@ -15,10 +15,8 @@ categorical_cols <- c(
 numeric_cols <- c("total_building_insurance_coverage", "community_rating_system_discount")
 response_col <- "amount_paid_on_building_claim"
 
-
 cvfolds <- small_data %>%
     rsample::vfold_cv(v = 2)
-# cvfolds
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
@@ -29,10 +27,8 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         data = analysis_data %>%
             select(-loss_proportion, -reported_zip_code)
     ) %>%
-        # step_log(total_building_insurance_coverage) %>%
         step_normalize(all_numeric(), -all_outcomes()) %>%
         step_novel(all_nominal()) %>%
-        # step_unknown(all_nominal(), new_level = "missing") %>%
         step_integer(all_nominal(), strict = TRUE, zero_based = TRUE) %>%
         prep(strings_as_factors = TRUE)
 
@@ -51,7 +47,6 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     model <- simple_net(env$cardinalities, length(numeric_cols), units = 64, fn_embedding_dim = function(x) 1)
 
     optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
-    # optimizer <- optim_rmsprop(model$parameters, lr = 0.1)
 
     train_loop(model, train_dl, valid_dl, epochs, optimizer)
 
@@ -85,18 +80,6 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
 
     preds_tabt <- get_preds(model_tabt, test_dl)
-    ### add simple attn model
-
-    # model_attn <- simple_net_attn(env$cardinalities, length(numeric_cols), units = 64, embed_dim = 5)
-
-    # optimizer <- optim_adam(model_attn$parameters, lr = learning_rate, weight_decay = 0)
-    # optimizer <- optim_rmsprop(model$parameters, lr = 0.1)
-
-    # train_loop(model_attn, train_dl, valid_dl, epochs, optimizer)
-
-    # replace_unseen_level_weights_(model$embedder$embeddings)
-
-    # preds_nn_attn <- get_preds(model_attn, test_dl)
 
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
@@ -107,7 +90,6 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     ) %>%
         step_mutate(flood_zone = substr(flood_zone, 1, 1)) %>%
         step_novel(all_nominal()) %>%
-        # step_unknown(all_nominal(), new_level = "missing") %>%
         step_log(total_building_insurance_coverage) %>%
         prep(strings_as_factors = FALSE)
 
@@ -169,3 +151,10 @@ cv_results %>%
             rmse_glm2 = rmse(x$actuals, x$preds_glm2)
         )
     })
+
+dir.create("model_files")
+saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
+saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
+saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
+torch_save(cv_results[[1]]$model_nn, "model_files/nn1.pt")
+torch_save(cv_results[[1]]$model_nn2, "model_files/nn2.pt")

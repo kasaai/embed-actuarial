@@ -5,10 +5,9 @@ source("R/table-charts-utils.R")
 
 ## Model1 relativity table
 
-glm1 <- cv_results[[1]]$model_glm
+glm1 <- readRDS("./model_files/glm1.rds")
 
-coefs_glm1 <- broom::tidy(glm1, exponentiate = TRUE) %>%
-    tidy_and_attach(exponentiate = TRUE) %>%
+coefs_glm1 <- tidy_and_attach(glm1, exponentiate = TRUE) %>%
     tidy_add_reference_rows() %>%
     tidy_add_term_labels() %>%
     tidy_remove_intercept() %>%
@@ -24,20 +23,19 @@ coefs_glm1 %>%
 
 ## Model4 relativity table
 
-glm2 <- cv_results[[1]]$model_glm2
+glm2 <- readRDS("./model_files/glm2.rds")
 
-coefs_glm2 <- broom::tidy(glm2, exponentiate = TRUE) %>%
-    tidy_and_attach(exponentiate = FALSE) %>%
+tidy_and_attach(glm2, exponentiate = FALSE) %>%
     select(term, estimate) %>%
     knitr::kable(digits = 3)
 
 
 ## Model2 learned embeddings tables
 
-nn1 <- cv_results[[1]]$model_nn
-nn1_key <- cv_results[[1]]$rec_nn$steps[[3]]$key
+nn1 <- torch_load("./model_files/nn1.pt")
+nn_key <- readRDS("./model_files/rec_nn_key.rds")
 
-nn1_embeddings <- extract_embeddings(nn1, nn1_key)
+nn1_embeddings <- extract_embeddings(nn1, nn_key)
 
 emb_flood_zone <- nn1_embeddings$flood_zone %>%
     rename(embedding = e1)
@@ -56,10 +54,9 @@ knitr::kable(emb_occupancy_type, digits = 2)
 
 ## Model4 learned embeddings tables
 
-nn2 <- cv_results[[1]]$model_nn2
-nn2_key <- cv_results[[1]]$rec_nn$steps[[3]]$key
+nn2 <- torch_load("./model_files/nn2.pt")
 
-nn2_embeddings <- extract_embeddings(nn2, nn2_key)
+nn2_embeddings <- extract_embeddings(nn2, nn_key)
 
 emb_flood_zone <- nn2_embeddings$flood_zone %>%
     filter(level == "A00") %>%
@@ -89,7 +86,6 @@ p <- nn1_embeddings$occupancy_type %>%
     ggplot() +
     coord_cartesian(ylim = c(-1, 1), xlim = c(NA, -1)) +
     # coord_cartesian(ylim = c(-3, 3), xlim = c(-5, 3)) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
     geom_text(aes(e1, 0.1, label = round(e1, 2), angle = 45)) +
     geom_text(aes(e1, -0.1, label = stringr::str_wrap(level, 40)), hjust = 0, angle = -45) +
     geom_point(aes(e1, 0)) +
