@@ -119,53 +119,6 @@ simple_net_attn <- nn_module(
     }
 )
 
-train_loop_alternate <- function(model, train_dl, valid_dl, epochs, optimizer) {
-    for (epoch in seq_len(epochs)) {
-        model$train()
-        train_losses <- c()
-
-        odd_epoch <- epoch %% 2 == 1
-
-        for (p in model$embedder$parameters) {
-            p$requires_grad_(odd_epoch)
-        }
-
-        for (p in model$output$parameters) {
-            p$requires_grad_(!odd_epoch)
-        }
-
-        for (b in enumerate(train_dl)) {
-            optimizer$zero_grad()
-            output <- model(b$x[[1]], b$x[[2]])
-            loss <- nnf_mse_loss(output, b$y)
-            loss$backward()
-
-            # if (odd_epoch) {
-            #     nn_utils_clip_grad_value_(model$embedder$parameters, 1)
-            # } else {
-            #     nn_utils_clip_grad_value_(model$output$parameters, 1)
-            # }
-
-            optimizer$step()
-            train_losses <- c(train_losses, loss$item())
-        }
-
-        model$eval()
-        valid_losses <- c()
-
-        for (b in enumerate(valid_dl)) {
-            output <- model(b$x[[1]], b$x[[2]])
-            loss <- nnf_mse_loss(output, b$y)
-            valid_losses <- c(valid_losses, loss$item())
-        }
-
-        cat(sprintf(
-            "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
-            mean(train_losses), mean(valid_losses)
-        ))
-    }
-}
-
 train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
     device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
     for (epoch in seq_len(epochs)) {
