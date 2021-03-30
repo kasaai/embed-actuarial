@@ -1,7 +1,8 @@
 flood_dataset <- dataset(
     "flood",
     initialize = function(df, categorical_cols, numeric_cols, response_col = NULL, env = NULL) {
-        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+        # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+        device <- "cpu"
         self$is_train <- if (!is.null(response_col)) TRUE else FALSE
         self$xcat <- df[categorical_cols] %>%
             as.matrix() %>%
@@ -69,17 +70,22 @@ simple_net <- nn_module(
         self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
-        self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
+        in_units <- sum_embedding_dim + num_numerical
+        self$fc <- nn_linear(in_units, units)
         self$output <- nn_linear(units, 1)
-        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
-        self$to(device = device)
+        # self$output <- nn_linear(in_units + units, 1)
+        self
     },
     forward = function(xcat, xnum) {
         embedded <- self$embedder(xcat)
         all <- torch_cat(list(embedded, xnum$to(dtype = torch_float())), dim = 2)
-        all %>%
+        out <- all %>%
             self$fc() %>%
-            nnf_relu() %>%
+            nnf_relu()
+        # torch_cat(list(all, out), dim = 2) %>%
+        #     self$output() %>%
+        #     nnf_softplus()
+        out %>%
             self$output() %>%
             nnf_softplus()
     }
@@ -96,20 +102,19 @@ simple_net_attn <- nn_module(
         self$embedder <- embedding_module_attn(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
-        self$embed_dim = fn_embedding_dim()
+        self$embed_dim <- fn_embedding_dim()
         self$attn <- nn_multihead_attention(embed_dim = 5, num_heads = 1)
         self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
         self$output <- nn_linear(units, 1)
-        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
-        self$to(device = device)
+        self
     },
     forward = function(xcat, xnum) {
         embedded <- self$embedder(xcat)
-        shapes = embedded$shape
-        embedded_reshape = embedded$view(list(embedded$shape[1],self$embed_dim,self$embed_dim))
+        shapes <- embedded$shape
+        embedded_reshape <- embedded$view(list(embedded$shape[1], self$embed_dim, self$embed_dim))
         embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
         embedded_attended <- embedded_attended[[1]]
-        embedded_attended = embedded_attended$view(list(embedded$shape[1],self$embed_dim * self$embed_dim))
+        embedded_attended <- embedded_attended$view(list(embedded$shape[1], self$embed_dim * self$embed_dim))
         all <- torch_cat(list(embedded_attended, xnum$to(dtype = torch_float())), dim = 2)
         all %>%
             self$fc() %>%
@@ -120,38 +125,46 @@ simple_net_attn <- nn_module(
 )
 
 train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
-    device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+    # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+    device <- "cpu"
     for (epoch in seq_len(epochs)) {
         model$train()
         train_losses <- c()
 
-        for (b in enumerate(train_dl)) {
+        coro::loop(for (b in train_dl) {
             optimizer$zero_grad()
             output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))
             loss <- nnf_mse_loss(output, b$y$to(device = device))
             loss$backward()
             optimizer$step()
             train_losses <- c(train_losses, loss$item())
-        }
+        })
 
-        model$eval()
-        valid_losses <- c()
+        # model$eval()
+        # valid_losses <- c()
 
-        for (b in enumerate(valid_dl)) {
-            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))
-            loss <- nnf_mse_loss(output, b$y$to(device = device))
-            valid_losses <- c(valid_losses, loss$item())
-        }
+        # for (b in enumerate(valid_dl)) {
+        #     output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))
+        #     loss <- nnf_mse_loss(output, b$y$to(device = device))
+        #     valid_losses <- c(valid_losses, loss$item())
+        # }
+
+        # cat(sprintf(
+        #     "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
+        #     mean(train_losses), mean(valid_losses)
+        # ))
 
         cat(sprintf(
-            "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
-            mean(train_losses), mean(valid_losses)
+            "Loss at epoch %d: training: %3f\n", epoch,
+            mean(train_losses)
         ))
     }
 }
 
 get_preds <- function(model, dl) {
-    device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+    model$eval()
+    # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+    device <- "cpu"
     preds <- numeric(0)
     for (b in enumerate(dl)) {
         preds <- c(
@@ -190,7 +203,8 @@ map_cats_to_embeddings <- function(data, keys) {
 }
 
 key_with_embeddings <- function(embeddings, key) {
-    device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+    # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+    device <- "cpu"
     Map(
         function(embedder, key) {
             # key$integer
@@ -228,14 +242,15 @@ embedding_with_position <- nn_module(
         self
     },
     forward = function(x) {
+        device <- "cpu"
         embedded <- vector(mode = "list", length = length(self$embeddings))
         for (i in seq_along(self$embeddings)) {
             embedded[[i]] <- self$embeddings[[i]](x[, i])
         }
         torch_cat(list(
             torch_stack(embedded, dim = 2),
-            torch_repeat_interleave(self$position_embeddings, 
-                torch_tensor(x$size()[[1]], dtype = torch_long())$to(device = "cuda"),
+            torch_repeat_interleave(self$position_embeddings,
+                torch_tensor(x$size()[[1]], dtype = torch_long())$to(device = device),
                 dim = 1
             )
         ), dim = 3)
@@ -251,7 +266,7 @@ mlp <- nn_module(
     forward = function(x) {
         x %>%
             self$linear1() %>%
-            nnf_relu() %>% 
+            nnf_relu() %>%
             self$linear2()
     }
 )
@@ -266,7 +281,7 @@ tabtransformer <- nn_module(
         self$linear1 <- nn_linear(embedding_dim + 1, 4 * (embedding_dim + 1))
         self$linear2 <- nn_linear(4 * (embedding_dim + 1), (embedding_dim + 1))
         self$mlp1 <- mlp(length(cardinalities) * (embedding_dim + 1) + num_numerical, fc_units)
-        device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
+        # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
         # self$to(device = device)
         self
     },
@@ -287,4 +302,11 @@ tabtransformer <- nn_module(
 
 rmse <- function(actuals, preds) {
     sqrt(sum((actuals - preds)^2) / length(actuals))
+}
+
+mean_gamma_deviance <- function(actuals, preds) {
+    epsilon <- .Machine$double.eps
+    actuals <- actuals + epsilon
+    preds <- preds + epsilon
+    2 * mean((actuals - preds) / preds - log(actuals / preds))
 }

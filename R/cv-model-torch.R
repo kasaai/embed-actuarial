@@ -15,8 +15,9 @@ categorical_cols <- c(
 numeric_cols <- c("total_building_insurance_coverage", "community_rating_system_discount")
 response_col <- "amount_paid_on_building_claim"
 
+set.seed(420)
 cvfolds <- small_data %>%
-    rsample::vfold_cv(v = 2)
+    rsample::vfold_cv(v = 5)
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
@@ -35,16 +36,28 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     ds <- flood_dataset(juice(rec_nn), categorical_cols, numeric_cols, response_col, env)
     baked_test_data <- bake(rec_nn, assessment_data)
     test_ds <- flood_dataset(baked_test_data, categorical_cols, numeric_cols)
-    train_indx <- sample(length(ds), 0.8 * length(ds))
-    valid_indx <- seq_len(length(ds)) %>% setdiff(train_indx)
-    train_ds <- dataset_subset(ds, train_indx)
-    valid_ds <- dataset_subset(ds, valid_indx)
 
-    train_dl <- train_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
-    valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
+    train_dl <- ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
+    # valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
     test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 
-    model <- simple_net(env$cardinalities, length(numeric_cols), units = 64, fn_embedding_dim = function(x) 1)
+    model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
+        embedding_dim = 2, num_heads = 1, fc_units = 8
+    )
+
+    optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
+
+    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer)
+
+    replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
+
+    preds_tabt <- get_preds(model_tabt, test_dl)
+
+
+    model <- simple_net(
+        env$cardinalities, length(numeric_cols),
+        units = 8, fn_embedding_dim = function(x) 1
+    )
 
     optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
 
@@ -55,7 +68,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     preds_nn <- get_preds(model, test_dl)
 
     model2 <- simple_net(env$cardinalities, length(numeric_cols),
-        units = 64,
+        units = 8,
         fn_embedding_dim = function(x) ceiling(x / 2)
     )
 
@@ -66,20 +79,6 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     replace_unseen_level_weights_(model2$embedder$embeddings)
 
     preds_nn2 <- get_preds(model2, test_dl)
-
-
-    model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
-        embedding_dim = 2, num_heads = 3, fc_units = 32
-    )
-    model_tabt <- model_tabt$to(device = "cuda")
-
-    optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
-
-    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer)
-
-    replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
-
-    preds_tabt <- get_preds(model_tabt, test_dl)
 
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
@@ -99,6 +98,10 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     )
 
     preds_glm <- predict(model_glm, bake(rec_glm, assessment_data), type = "response")
+
+    model_glm_gaussian <- glm(form, family = gaussian, data = juice(rec_glm), control = list(maxit = 100))
+
+    preds_glm_gaussian <- predict(model_glm_gaussian, bake(rec_glm, assessment_data), type = "response")
 
     rec_glm2 <- recipe(form,
         data = analysis_data
@@ -127,6 +130,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         rec_nn = rec_nn,
         model_glm = model_glm,
         rec_glm = rec_glm,
+        model_glm_gaussian = model_glm_gaussian,
         model_glm2 = model_glm2,
         rec_glm2 = rec_glm2,
         actuals = actuals,
@@ -134,12 +138,13 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         preds_nn2 = preds_nn2,
         preds_tabt = preds_tabt,
         preds_glm = preds_glm,
+        preds_glm_gaussian = preds_glm_gaussian,
         preds_glm2 = preds_glm2
     )
 }
 
 cv_results <- cvfolds$splits %>%
-    lapply(function(x) model_analyze_assess(x, 0.1, 1, 1024))
+    lapply(function(x) model_analyze_assess(x, 0.5, 30, 1000))
 
 cv_results %>%
     map(function(x) {
@@ -148,7 +153,14 @@ cv_results %>%
             rmse_nn2 = rmse(x$actuals, x$preds_nn2),
             rmse_tabt = rmse(x$actuals, x$preds_tabt),
             rmse_glm = rmse(x$actuals, x$preds_glm),
-            rmse_glm2 = rmse(x$actuals, x$preds_glm2)
+            rmse_glm2 = rmse(x$actuals, x$preds_glm2),
+            rmse_glm_gaussian = rmse(x$actuals, pmax(x$preds_glm_gaussian, 0.01)),
+            mgd_nn = mean_gamma_deviance(x$actuals, x$preds_nn),
+            mgd_nn2 = mean_gamma_deviance(x$actuals, x$preds_nn2),
+            mgd_tabt = mean_gamma_deviance(x$actuals, x$preds_tabt),
+            mgd_glm = mean_gamma_deviance(x$actuals, x$preds_glm),
+            mgd_glm2 = mean_gamma_deviance(x$actuals, x$preds_glm2),
+            mgd_glm_gaussian = mean_gamma_deviance(x$actuals, pmax(x$preds_glm_gaussian, 0.01))
         )
     })
 
