@@ -99,7 +99,7 @@ simple_net_attn <- nn_module(
                           units = 16,
                           embed_dim = 5,
                           fn_embedding_dim = function(x) embed_dim) {
-        self$embedder <- embedding_module_attn(cardinalities, fn_embedding_dim)
+        self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
         self$embed_dim <- fn_embedding_dim()

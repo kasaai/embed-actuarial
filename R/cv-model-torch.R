@@ -80,6 +80,17 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     preds_nn2 <- get_preds(model2, test_dl)
 
+    model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
+                         units = 8)
+
+    optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, weight_decay = 0)
+
+    train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer)
+
+    replace_unseen_level_weights_(model_simple_attn$embedder$embeddings)
+
+    preds_simple_attn <- get_preds(model_simple_attn, test_dl)
+
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
         occupancy_type + flood_zone + primary_residence + community_rating_system_discount
@@ -126,6 +137,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     list(
         model_nn = model,
         model_nn2 = model2,
+        model_simple_attn = model_simple_attn,
         model_tabt = model_tabt,
         rec_nn = rec_nn,
         model_glm = model_glm,
@@ -136,6 +148,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         actuals = actuals,
         preds_nn = preds_nn,
         preds_nn2 = preds_nn2,
+        preds_simple_attn = preds_simple_attn,
         preds_tabt = preds_tabt,
         preds_glm = preds_glm,
         preds_glm_gaussian = preds_glm_gaussian,
@@ -151,12 +164,14 @@ cv_results %>%
         list(
             rmse_nn = rmse(x$actuals, x$preds_nn),
             rmse_nn2 = rmse(x$actuals, x$preds_nn2),
+            rmse_simple_attn = rmse(x$actuals, x$preds_simple_attn),
             rmse_tabt = rmse(x$actuals, x$preds_tabt),
             rmse_glm = rmse(x$actuals, x$preds_glm),
             rmse_glm2 = rmse(x$actuals, x$preds_glm2),
             rmse_glm_gaussian = rmse(x$actuals, pmax(x$preds_glm_gaussian, 0.01)),
             mgd_nn = mean_gamma_deviance(x$actuals, x$preds_nn),
             mgd_nn2 = mean_gamma_deviance(x$actuals, x$preds_nn2),
+            mgd_simple_attn = mean_gamma_deviance(x$actuals, x$preds_simple_attn),
             mgd_tabt = mean_gamma_deviance(x$actuals, x$preds_tabt),
             mgd_glm = mean_gamma_deviance(x$actuals, x$preds_glm),
             mgd_glm2 = mean_gamma_deviance(x$actuals, x$preds_glm2),
@@ -170,3 +185,4 @@ saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
 saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
 torch_save(cv_results[[1]]$model_nn, "model_files/nn1.pt")
 torch_save(cv_results[[1]]$model_nn2, "model_files/nn2.pt")
+torch_save(cv_results[[1]]$model_simple_attn, "model_files/nn_simple_attn.pt")
