@@ -51,11 +51,11 @@ used within the model as a new predictor variable.
 
 This approach to modelling categorical data has several advantages over more traditional treatments of categorical data.
 Using categorical embeddings instead of traditional techniques has been shown to increase predictive accuracy of 
-models, for example, see [@Richman2018] in the context of pricing. Models incorporating categorical embeddings can be
+models, for example, see @Richman2018 in the context of pricing. Models incorporating categorical embeddings can be
 pre-calibrated to traditional actuarial models, increasing the speed with which these models can be calibrated and 
 leading to models with better explainability [@wuthrich2019yes]. Finally, the similarity between the vectors learned 
 for different categories can be inspected, sometimes leading to insights into the workings of models, see, for example,
-[@Kuo2019].
+@Kuo2019.
 
 On the other hand, several open questions about the use of embeddings within actuarial work remain, which we aim to 
 address in this study. First, hyperparameter settings for embeddings, such as the dimensions of the embedding layer and
@@ -83,23 +83,22 @@ The rest of this manuscript is organized as follows. Section \ref{lit_review} re
 in the actuarial literature. Section \ref{defns} provides the notation used in the paper and defines GLMs, neural 
 networks and related modelling concepts, including embeddings and attention. In Section \ref{modelling}, we provide 
 initial models for the NFIP dataset and consider the influence of hyperparameter choices on the results of the neural 
-network model. Section \ref{tl} considers how successfully the embeddings used in the neural network model can be 
-transferred to a GLM model of the same data. Extensions to the modelling approach are considered in Section \ref{extend} 
-and we focus on attention based models in Section \ref{attention}. The interpretability of embedding layers is addressed
-in Section \ref{interpretation}. Finally, Section \ref{Conclusions} provides a discussion of the results of this paper
+network model. That section also considers how successfully the embeddings used in the neural network model can be 
+transferred to a GLM model of the same data and how learned embeddings can be interpreted. We focus on attention based models 
+in Section \ref{attention_models}. Finally, Section \ref{Conclusions} provides a discussion of the results of this paper
 and considers avenues for future research.
 
 # Literature Review {#lit_review}
 
 Categorical data are usually modelled within GLMs and other predictive models using indicator variables which capture 
-the effect of each level of the category, see, for example, Section 2 in [@Goldburd], using one of two main encoding 
+the effect of each level of the category, see, for example, Section 2 in @Goldburd, using one of two main encoding 
 schemes: dummy-coding and one-hot encoding. Dummy-coding, used in the popular \texttt{R} statistical software, assigns 
 one level of the category as a baseline, for which an indicator variable is not calibrated, and the rest of the levels 
 are assigned indicator variables, thus, producing estimates within the model of how the effects of each level differ 
 from the baselines. One-hot encoding, often used in machine learning, is similar to dummy-coding, but assigns 
 indicator variables to each level, in other words, calibrates an extra indicator variable compared with dummy-coding.
 
-A different approach to modelling categorical data is credibility theory (see [@Buhlmann2006] for an overview), which, 
+A different approach to modelling categorical data is credibility theory (see @Buhlmann2006 for an overview), which, 
 in the context of rating, can be applied to derive premiums that reflect the experience of a particular policyholder, by 
 estimating premiums as a weighted average between the premium produced using the collective experience (i.e. of all 
 policyholders) and the premium produced using the experience of the particular policyholder. The weight used in this 
@@ -114,7 +113,7 @@ and the experience in each level of the category.
 
 Embedding layers represent a different approach to the problem of modelling categorical data that was recently 
 introduced in an actuarial context. Note that in the next section, we reflect on similarities between the conventional 
-approaches discussed above and embedding layers. [@Richman2018] reviewed the concept of embedding layers and connected 
+approaches discussed above and embedding layers. @Richman2018 reviewed the concept of embedding layers and connected 
 the sharing of information across categories to the familiar concept of credibility theory. In that work, two 
 applications of embedding layers were demonstrated. The first of these was in a Property and Casualty (P&C) pricing 
 context, it was shown that the out-of-sample accuracy of a neural network trained to predict claims frequencies on motor 
@@ -124,7 +123,7 @@ Database, where the differences in population mortality across countries and the
 ages were modelled with embedding layers, again producing more accurate out of sample performance than the other models 
 tested.
 
-Contemporaneous with that work is the DeepTriangle model of [@Kuo2019], which applied recurrent neural networks to the 
+Contemporaneous with that work is the DeepTriangle model of @Kuo2019, which applied recurrent neural networks to the 
 problem of Incurred but not Reported (IBNR) loss reserving, to model jointly the paid and incurred losses in the 
 Schedule P dataset. Embedding layers were used to capture the effect of differences in reserving delays and loss ratios 
 for each company in the Schedule P dataset. Evaluating the results of the DeepTriangle method showed that the out of 
@@ -132,11 +131,11 @@ sample performance of the model (tested against the lower triangles in the Sched
 traditional IBNR reserving techniques.
 
 Many other applications of embeddings have subsequently appeared in the actuarial literature. Within mortality 
-forecasting, [@Richman2019d] and [@Richman2020] both apply embeddings layers to model and forecast mortality rates on a 
-large scale. [@wuthrich2019yes] discussed how embeddings can be calibrated using GLM techniques and then incorporated 
-into a combined actuarial neural network, with subsequent contributions in P&C pricing by [@schelldorfer2019nesting] and 
-in IBNR reserving by [@Gabrielli2019c] and [@Gabrielli2019]. Other applications in IBNR reserving are in [@Kuo2020] and 
-[@Delong2020a] who use embedding layers to model individual claims development.
+forecasting, @Richman2019d and @Richman2020 both apply embeddings layers to model and forecast mortality rates on a 
+large scale. @wuthrich2019yes discussed how embeddings can be calibrated using GLM techniques and then incorporated 
+into a combined actuarial neural network, with subsequent contributions in P&C pricing by @schelldorfer2019nesting and 
+in IBNR reserving by @Gabrielli2019c and @Gabrielli2019. Other applications in IBNR reserving are in @Kuo2020 and 
+@Delong2020a who use embedding layers to model individual claims development.
 
 # Theoretical Overview {#defns}
 
@@ -167,7 +166,7 @@ A categorical variable $X_j, j \in J_{cat}$ takes as its value only one of a fin
 labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ 
 is the cardinality or number of levels, in $\mathcal{P}^j$. One-hot encoding maps each value $x_{i,j}$ of $X_j$ to 
 $n_\mathcal{P}^j$ indicator variables, which take a value of $1$ if the label of $x_{i,j}$ corresponds to the level of 
-the indicator variable, and $0$ otherwise. An example of one-hot encoding is shown in Table \ref{onehot}.
+the indicator variable, and $0$ otherwise. An example of one-hot encoding is shown in Table \@ref(tab:onehot).
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
 require(dplyr)
@@ -193,7 +192,7 @@ cbind(sample_dat, dummy_data) %>%
 One-hot encoding is often used in the machine learning community while the statistical community often favors dummy 
 coding, which, instead of assigning $n_p^j$ indicator variables, assigns one of the levels of the categories as a 
 baseline, and maps all of the other $n_p^j -1$ variables to indicator variables. An example of dummy encoding is shown 
-in Table \ref{dummy}.
+in Table \@ref(tab:dummy).
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
 
@@ -231,7 +230,7 @@ experience rating and other applications. These techniques provide an estimate t
 the individual policyholder but also that of the collective, based on an estimate of how credible the data for each 
 individual is. While we have described the application of credibility in a simple univariate context, it is also 
 possible to apply credibility considerations within GLMs. using models known as Generalized Linear Mixed Models or 
-GLMMs, and we refer to [@Klinker2010] for more details.
+GLMMs, and we refer to @Klinker2010 for more details.
 
 Having described traditional approaches for modeling categorical data, we now turn to neural networks, and discuss 
 embedding layers for categorical data modeling, which we define in more detail in the section on neural networks.
@@ -240,7 +239,7 @@ embedding layers for categorical data modeling, which we define in more detail i
 
 Neural networks are flexible machine learning models that have recently been applied to a number of problems with 
 Property and Casualty (P&C) insurance. Here, we provide a brief overview of these models, and refer the reader to 
-[@Richman2018] for a more detailed overview. Neural networks are characterized by multiple layers of non-linear 
+@Richman2018 for a more detailed overview. Neural networks are characterized by multiple layers of non-linear 
 regression functions that are used to learn a new representation of the data input to the network that is then used to 
 make predictions. Here we focus on the most common type of neural networks, which are fully connected networks (FCNs), 
 which provide as the output of each set of non-linear functions to the subsequent layer of functions. Formally, a 
@@ -257,16 +256,16 @@ z^K &= \sigma(a_{K}.z^{K-1}+ b_{K}) \\
 \end{split}
 \end{equation}
 
-where the regression parameters (weights) for each layer $$k \in [1;K]$$ are represented by the matrices $a_k$ and the 
+where the regression parameters (weights) for each layer $k \in [1;K+1]$ are represented by the matrices $a_k$ and the 
 intercept terms are represented by $b_k$. Whereas the calculation inside each of the layers is nothing more than linear 
-regression, $\sigma$ represents the non-linear part of each layer. Choices for $\sigma$ are often the tanh function or 
-the rectified linear unit (ReLu) $max(0,x)$. The parameters of the network are estimated ('trained') as follows. First a 
-loss function $L(.,.)$ is specified for the network that measures the difference between the observed data $y$ and the 
-predictions of the network $\hat{y}$, for example, the Mean Squared Error ($(y - \hat{y})^2$). Then, the parameters of 
+regression, $\sigma$ represents the non-linear part of each layer. Choices for $\sigma$ are often the hyperbolic tangent 
+(tanh) function or the rectified linear unit (ReLu) $max(0,x)$. The parameters of the network are estimated ('trained') 
+as follows. First a loss function $L(.,.)$ is specified for the network that measures the difference between the observed data $y$ 
+and the predictions of the network $\hat{y}$, for example, the Mean Squared Error ($(y - \hat{y})^2$). Then, the parameters of 
 the network are changed such that the loss decreases (formally, this is done using the technique of backpropagation).
 Finally, training is stopped once the predictive performance of the network on unseen data is suitably good. 
 
-If $K$ is set equal to $1$, then Equation \ref{NN} reduced to nothing more than a GLM. A neural network with $K=2$ is 
+If $K$ is set equal to $1$, then Equation \ref{NN} reduces to nothing more than a GLM. A neural network with $K=2$ is 
 called a shallow neural network and for $K \geq 2$, the network is called a deep neural network. The matrix $X$ of data 
 input to the network can be composed of both continuous variables as well as categorical variables, which can be 
 pre-processed using one-hot or dummy encoding. As mentioned above, a different option is to use encodings, which we 
@@ -280,22 +279,23 @@ from applying these schemes often cause computational difficulties. Besides for 
 is that one-hot or dummy encoded data assumes that each category is entirely independent of the rest of the categories, 
 in other words, there are no similarities between categories that could enable more robust estimation of models. In 
 technical terms, this is because the columns of the matrices created by one-hot encoding are all orthogonal to each 
-other. (These arguments appear in a similar form in [@Guo2016].) Solutions to these problems are provided by embedding 
+other. (These arguments appear in a similar form in @Guo2016.) Solutions to these problems are provided by embedding 
 layers. 
 
 An embedding layer is a neural network component which maps each level of the categorical data to a low dimensional 
 vector of parameters that is learned together with the rest of the GLM or neural network that is used for the modeling 
 problem. Formally, an embedding is
 
-$$
-z_\mathcal{P^j} : \mathcal{P^j} \to \mathbb{R}^{q_\mathcal{P^j} }, \quad \quad p^j \mapsto  z_\mathcal{P^j}(p),
-$$ 
+\begin{equation} 
+\label{embed_map}
+  z_\mathcal{P}^j : \mathcal{P}^j \to \mathbb{R}^{q_\mathcal{P}^j }, \quad \quad p^j \mapsto  z_\mathcal{P}^j(p),
+\end{equation}
 
-where $q_\mathcal{P^j}$ is the dimension of the embedding for the $j$th categorical variable and $z_\mathcal{P^j}(.)$ is 
-a function that maps from the particular element of the labels $p$ to the embedding space. Equation \ref{eq:embedding} 
-states that an embedding maps a level of a categrical variable to a numerical vector. This function is left implicit, 
+where $q_\mathcal{P}^j$ is the dimension of the embedding for the $j$th categorical variable and $z_\mathcal{P}^j(.)$ is 
+an implicit function that maps from the particular element of the labels $p$ to the embedding space. Equation \ref{embed_map} 
+states that an embedding maps a level of a categorical variable to a numerical vector. This function is left implicit, 
 meaning to say, we allow the embeddings to be derived during the process of fitting the model and do not attempt to 
-specify exactly how the embeddings can be derived from the input data. In Table \ref{embed} we show an example of two 
+specify exactly how the embeddings can be derived from the input data. In Table \@ref(tab:embed) we show an example of two 
 dimensional embeddings for the state variables, where these have been generated randomly.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
@@ -310,7 +310,7 @@ sample_dat <- sample_n(states, 5) %>%
 
 
 data.frame(sample_dat, dimension1 = rnorm(5), dimension2 = rnorm(5)) %>%
-  knitr::kable(label = "", caption = "Example (random) embeddings of the state variable")
+  knitr::kable(label = "embed", caption = "Example (random) embeddings of the state variable")
 ```
 
 When applying embeddings in a data modeling context using neural networks, the values of the embeddings will be 
@@ -328,29 +328,60 @@ where we represent the output of embedding layers concatenated together with any
 ### Attention {#attention}
 
 
-Attention mechanisms have been widely applied within the deep learning literature to give more flexibility to RNNs [@Bahdanau2015a] and subsequently as a replacement for FCNs in the so-called Transformer architecture, which is now widely used in natural language processing [@Vaswani2017a], and, more recently, has been applied to computer vision and tabular modelling tasks. Attention mechanisms allow deep neural nets to weight the covariates entering the model in a flexible manner; these types of applications in natural langauge processing are demonstrated in, for example, [@Vaswani2017a]. In an actuarial context, attention mechanisms can be understood as giving greater weight to covariates that are important for the modelling task. In this section we provide a theoretical introduction to attention mechanisms and then discuss applications of attention to modeling tabular data. In the following sections of this paper, we then consider whether adding attention to an model that uses embeddings can provide better predictive accuracy. The following is intended as a high level review of some of the relevant theory behind attention based approaches; for more technical details the sources quoted in this section can be consulted.
+Attention mechanisms have been widely applied within the deep learning literature to give more flexibility to RNNs [@Bahdanau2015a] 
+and subsequently as a replacement for FCNs in the so-called Transformer architecture, which is now widely used in natural language processing [@Vaswani2017a], 
+and, more recently, has been applied to computer vision and tabular modelling tasks. 
+Attention mechanisms allow deep neural nets to weight the covariates entering the model in a flexible manner; these types of applications in natural language 
+processing are demonstrated in,
+for example, @Vaswani2017a. In an actuarial context, attention mechanisms can be understood as giving greater weight to covariates that are important for the modelling task. 
+In this section we provide a theoretical introduction to attention mechanisms and then discuss applications of attention to modeling tabular data. 
+In the following sections of this paper, we then consider whether adding attention to an model that uses embeddings can provide better predictive accuracy. 
+The following is intended as a high level review of some of the relevant theory behind attention based approaches; for more technical details the sources quoted in this section can be consulted.
+
+At a high level, attention mechanisms reweight the covariates $X$ within a predictive model to give greater weight to covariates that are more
+predictive for a particular problem. The attention weights can be derived in several different manners. Earlier works, such as @Bahdanau2015a
+used so-called "additive" attention scores derived as the output of a neural network taking the covariates as inputs. Currently, the most popular
+form of attention is the "scaled dot-product" attention of @Vaswani2017a which we describe in what follows. We also mention that usually, so-called
+"self-attention" is applied, meaning to say that the importance scores for the covariates are derived using the covariates themselves (i.e. in what follows,
+the attention scores are derived in Equation \ref{eq:attention_scores} using the transformed covariates). Other options, such as using a different source of
+data to derive the attention scores, are also possible.
 
 An attention mechanism is a mapping:
 
 ```{=latex}
 \begin{equation}
-A: \mathbb{R}^{(q \times d) \times (q \times d) \times (q \times d)} \to \mathbb{R}^(q \times d), ~~
-(Q, K, V) ~\mapsto ~ V^* = A(Q, K, V),
+X^*: \mathbb{R}^{(q \times d) \times (q \times d) \times (q \times d)} \to \mathbb{R}^{(q \times d)}, ~~
+(Q, K, X') ~\mapsto ~ X^* = A(Q, K, X'),
 \label{eq:attention}
 \end{equation}
 ```
-where $Q \in \mathbb{R}^{q \times d}$ is a matrix of query vectors, $K \in \mathbb{R}^{q \times d}$ is a matrix of key vectors, $X' \in \mathbb{R}^{q \times d}$ is a matrix of value vectors and $X^* \in \mathbb{R}^{q \times d}$, the output of the attention mechanism, is a new matrix of values. Several different options for the mapping \eqref{eq:attention} exist in the literature; here we describe the self-attention mechanism used in [@Vaswani2017a]. In more detail, consider that $X'$ is a matrix of covariates relating to a regression problem, which, in the case of tabular data, will usually be composed of embeddings of the same dimension for several different categorical or numerical variables; in the case discussed here we have $q$ covariates in the form of embeddings of dimension $d$. For clarity, note that in Equation \ref{eq:embed_to_nn} we have used the symbol $X'$ to denote the vector of embeddings and numerical inputs which is passed into the neural network. In what follows, we now use the symbol $X'$ to refer to the matrix of embeddings of dimension $q \times d$.
+where $Q \in \mathbb{R}^{q \times d}$ is a matrix of query vectors, $K \in \mathbb{R}^{q \times d}$ is a matrix of key vectors,
+ $X' \in \mathbb{R}^{q \times d}$ is a matrix of value vectors and $X^* \in \mathbb{R}^{q \times d}$, 
+ the output of the attention mechanism, is a new matrix of values that have been reweighted according to their importance for the modelling problem. 
+ As noted above, several different options for the mapping in Equation \ref{eq:attention} exist in the literature; here we describe the scaled dot-product self-attention mechanism 
+ used in @Vaswani2017a. In more detail, consider that $X'$ is a matrix of covariates relating to a regression problem, which, 
+ in the case of tabular data, will usually be composed of embeddings of the same dimension for several different categorical or numerical variables.
+ In the case discussed here we have $q$ covariates mapped to embeddings of dimension $d$. For clarity, note that in Equation \ref{eq:embed_to_nn} 
+ we have used the symbol $X'$ to denote the vector of embeddings and numerical inputs which is passed into the neural network. 
+ We slightly overload this notation and, in what follows, we now use the symbol $X'$ to refer to the matrix of embeddings of dimension $q \times d$.
 
-We wish to apply the attention mechanism to $X'$ to assign weights to the most important embeddings for the regression problem; this is done from the \`\`perspective" of each covariate in $x'$. To do this, we formulate the query matrix $Q$ which contains information about the regression problem at hand; this is usually done by passing $X'$ through a FCN trained to derive queries from the covariates. Similarly, the matrix $K$ contains the relevance of each row of $V$ for the regression problem and is also usually derived by passing each row of $X'$ through another FCN. Finally, the matrix $X'$can be processed with a third FCN or left as is. The first step of the attention mechanism is to derive a matrix $A \in \mathbb{R}^{q \times q}$ of attention scores:
+We wish to apply the attention mechanism to $X'$ to assign weights to the most important embeddings for the regression problem; 
+this is done from the "perspective" of each covariate represented by the $q$ rows of $X'$. To do this, we formulate a so-called query matrix $Q$ 
+which contains information about the regression problem at hand; this is usually done by passing $X'$ through a neural network trained to derive 
+queries from the covariates. Similarly, the matrix $K$ contains the relevance of each row of $X'$ for the regression problem and 
+is also usually derived by passing each row of $X'$ through another neural network. Finally, the matrix $X'$ can be left as is, or processed through another neural network. 
+The first step of the attention mechanism is to derive a matrix $A \in \mathbb{R}^{q \times q}$ of attention scores:
 
 ```{=latex}
 \begin{equation}
-\mathbb{R}^{(q \times d) \times (q \times d)} \to \mathbb{R}^{q \times q}, ~~
-(Q, K) ~\mapsto ~ A = Q~K^T.
+A: \mathbb{R}^{(q \times d) \times (q \times d)} \to \mathbb{R}^{q \times q}, ~~
+(Q, K) ~\mapsto ~ A = \frac{Q~K^T}{\sqrt{d}},
 \label{eq:attention_scores}
 \end{equation}
 ```
-The attention scores $A$ are then normalized, or made to sum to unity, across the columns of $A$ using a so-called softmax function i.e.
+
+and where the division by $\sqrt{d}$ is done element-wise. The attention scores $A$ are then normalized, or made to sum to unity, 
+across the columns of $A$ using a so-called softmax function i.e.
 
 ```{=latex}
 \begin{equation}
@@ -362,39 +393,64 @@ Finally, a linear combination of $X'$ is formed to give the new matrix of covari
 
 ```{=latex}
 \begin{equation}
-\mathbb{R}^{(q \times q) \times (q \times d)} \to \mathbb{R}^{q \times d}, ~~
-(A^*, x') ~\mapsto ~ X^* = A^*~X'.
+X^*: \mathbb{R}^{(q \times q) \times (q \times d)} \to \mathbb{R}^{q \times d}, ~~
+(A^*, X') ~\mapsto ~ X^* = A^*~X'.
 \label{eq:attention_output}
 \end{equation}
 ```
-In most applications of attention, Equation \ref{eq:attention_scores} is modified by dividing the attention scores by $d^{\frac{1}{2}}$.
+<!-- In most applications of attention, Equation \ref{eq:attention_scores} is modified by dividing the attention scores by $d^{\frac{1}{2}}$. -->
 
-An intuitive explanation of the attention formula is as follows: we start by considering the importance of all of the covariates that we have for our modelling problem in the context of each individual covariate. This is done by assigning a score between zero and one to each covariate in the modelling problem, and we repeat this process for each of the covariates. Then, we replace each of the original covariates with a new covariate that has been formed by taking a weighted average of the covariates and the scores.
+An intuitive explanation of the attention formula is as follows: we start by considering the importance of all of the covariates 
+that we have for our modelling problem in the context of each individual covariate. This is done by assigning a score between zero
+and one to each covariate in the modelling problem, and we repeat this process for each of the covariates. Then, we replace each 
+of the original covariates with a new covariate that has been formed by taking a weighted average of the covariates and the scores.
 
 ### Transformer models
 
-Self-attention is the main building block of the current state of the art model for natural language processing, which is the Transformer model [@Vaswani2017]. A basic Transformer model applies self-attention to the covariate matrix, $X'$ which is fed into the model, to produce a new matrix of covariates, $X^*$. These two matrices, the input matrix $X'$ and the output matrix $X^*$ are added (in an element-wise manner) together and then normalized. This matrix is then further processed through a neural network and subsequently, these processed covariates are used in the machine learning task. Multiple Tranformer network "blocks" can be added to a network to create a deep Transformer network.
+Self-attention is the main building block of the current state of the art model for natural language processing, which is the Transformer model [@Vaswani2017a]. 
+A basic Transformer model applies self-attention to the covariate matrix, $X'$ which is fed into the model, to produce a new matrix of covariates, $X^*$. 
+These two matrices, the input matrix $X'$ and the output matrix $X^*$ are added (in an element-wise manner) together and then normalized. 
+This matrix is then further processed through a neural network and subsequently, these processed covariates are used in the machine learning task. These stages of the 
+Transformer model help to make the optimization of the network easier than applying scaled self-attention directly to the matrix of covariates $X'$.
 
-The Transformer model is much more accurate on NLP tasks compared to using the raw covariates before processing with a Transformer, to the extent that this model now underlies most NLP applications that use deep learning.
+Multiple Transformer network "blocks" can be added to a network to create a deep Transformer network.
+
+The Transformer model is much more accurate on NLP tasks compared to using the raw covariates before processing with a Transformer, to the extent that 
+this model now underlies most NLP applications that use deep learning.
 
 ### Attention Modelling for Tabular Data
 
-Several different approaches to applying attention within the modelling of tabular data have been proposed in the literature. Perhaps the simplest way of doing this is to insert an attention layer between the embeddings and the rest of the neural network. Mathematically, we can modify Equation \ref{eq:embed_to_nn} as follows:
+Several different approaches to applying attention within the modelling of tabular data have been proposed in the literature. Perhaps the simplest way of doing 
+this is to insert an attention layer between the embeddings and the rest of the neural network. Mathematically, we can modify Equation \ref{eq:embed_to_nn} as follows:
 
 ```{=latex}
-\begin{eqnarray}
-  X^* = Attn(X') \\
-  z^1 = \sigma(a_1.X^* + b_1),
+\begin{equation}
+\begin{split}
+  X^* &= A(X') \\
+  z^1 &= \sigma(a_1.X^* + b_1),
+\end{split}
 \label{eq:embed_to_attn_to_nn}
-\end{eqnarray}
+\end{equation}
 ```
-where $X' \in \mathbb{R}^{q \times d}$ is the matrix of embeddings after concatenating $q$ embeddings of dimension $d$ together and $X^*$ represents the matrix of embeddings $X'$ after processing with attention. Below, we demonstrate the effect of adding this simple application of attention to a tabular model.
+where $X' \in \mathbb{R}^{q \times d}$ is the matrix of embeddings after concatenating $q$ embeddings of dimension $d$ together, $X^*$ 
+represents the matrix of embeddings $X'$ after processing with attention and $A$ is the attention function defined in Equations \ref{eq:attention} - \ref{eq:attention_output}. 
+Below, we demonstrate the effect of adding this simple application of attention to a tabular model.
 
-[@Huang2020] refines this approach in a model they call the TabTransformer, which implements two main changes to the approach shown in Equations \ref{eq:embed_to_attn_to_nn}. The first of these is that, instead of using the matrix of embeddings after processing with self-attention ($X'$) directly in the model, the output of a Transformer model is used instead. The second of these refinements is that for each of the $q$ covariates with an embedding in the matrix $X'$, we include a new row embedding which denotes which covariate each embedding relates to. Thus, in the TabTransformer model, we augment the embedding matrix with extra columns, so that the dimension of this matrix is $q \times (d + d_col)$, where $d_col$ is the dimension of the row embedding. [@Huang2020] find that including this identifier improves the performance of the model. We compare the results of the TabTransformer model to the other models tested below.
+@Huang2020 refines this approach in a model they call the TabTransformer, which implements two main changes to the approach shown in Equations \ref{eq:embed_to_attn_to_nn}. 
+The first of these is that, instead of using the matrix of embeddings after processing with self-attention ($X'$) directly in the model, 
+the output of a Transformer model is used instead. The second of these refinements is that for each of the $q$ covariates with an embedding in the matrix $X'$, 
+we include a new row embedding which denotes which covariate each embedding relates to. Thus, in the TabTransformer model, we augment 
+the embedding matrix with extra columns, so that the dimension of this matrix is $q \times (d + d_{col})$, where $d_{col}$ is the dimension of the row embedding.
+@Huang2020 find that including this identifier improves the performance of the model. We compare the results of the TabTransformer model to the other models tested below.
 
-Finally, a different way of incorporating attention into the modeling of tabular data has been proposed by [@Ark2019], who refer to their model as TabNet. In summary, the main idea of the TabNet model is to try emulate the excellent performance of decision trees on tabular data modelling using deep neural networks. This is done by structuring the neural networks to emulate a key aspect of decision tree modelling, which is the efficient selection of relevant covariates for the model task. Within TabNet, an attention based model is used to select features by estimating attention scores for each covariate within $X$. The covariates are multiplied by the attention scores to downweight less relevant features for the prediction problem. 
+Finally, a different way of incorporating attention into the modeling of tabular data has been proposed by @Ark2019, who refer to their model as TabNet. 
+In summary, the main idea of the TabNet model is to try emulate the excellent performance of decision trees on tabular data modelling using deep neural networks. 
+This is done by structuring the neural networks to emulate a key aspect of decision tree modelling, which is the efficient selection of relevant covariates
+for the model task. Within TabNet, an attention based model is used to select features by estimating attention scores for each covariate within $X$. 
+The covariates are multiplied by the attention scores to down-weight less relevant features for the prediction problem. Other less important details of the Tabnwet
+model are given in @Ark2019.
 
-# Predictive Modeling with Embeddings
+# Predictive Modeling with Embeddings {#modelling}
 
 In this section, we walk through a simple predictive modeling exercise in order to illustrate the application of 
 embeddings. First, we pose a supervised regression problem, based on flood insurance claims severity. We then develop 
@@ -809,14 +865,14 @@ the two), but a mean, mean weighted by frequency of observations, or trimmed mea
 
 In Table TODO, we exhibit the cross-validated performance metrics of each of the models.
 
-# Extending the model {#extend}
+<!-- # Extending the model {#extend}
 
 Investigate approaches for using embedding layers for numeric variables, or numeric variables that were captured as 
 categorical variables (Can the modelling of numerical variables benefit from the application of embedding layers?) How 
 should this best be done? CatBoost - cut into 256 groups smoothness Map numeric to a dense layer and use that as 
 embedding - basis expansion Add a distribution to the embeddings Can insights from credibility theory lead to enhanced embeddings? Take credibility mixture over embeddings Cluster embeddings PCA of embeddings
-
-# Attention based modelling {#attn}
+-->
+# Attention based modelling {#attention_models}
 
 Can we get some lift by adding attention layers? TabNet model Transformer model
 
