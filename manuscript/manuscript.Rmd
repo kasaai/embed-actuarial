@@ -65,11 +65,10 @@ different settings perform in the context of a large-scale predictive modelling 
 process that can be followed to determine this in other problems. Although neural network have been shown to achieve
 excellent predictive accuracy on actuarial tasks, many actuaries still prefer to use GLM models for pricing tasks, 
 thus, the issue of whether transferring embeddings to GLM models can achieve better performance is considered in this
-paper. Traditional actuarial techniques such as credibility theory have been used to work with some types of 
-categorical data, but no study has been performed whether this can be applied within embeddings; here, we investigate
-whether performance is enhanced by applying credibility theory on embeddings relating to categorical variables with
-many labels. Whereas embedding layers are usually considered in the context of categorical data,the option exists to
-quantize numerical data and model it using embeddings, however, the results of doing so have not been investigated.
+paper. <!-- Traditional actuarial techniques such as credibility theory have been used to work with some types of categorical data, but no study has been -->
+<!-- performed whether this can be applied within embeddings; here, we investigate whether performance is enhanced by applying credibility theory on embeddings 
+relating to categorical variables with many labels. Whereas embedding layers are usually considered in the context of categorical data,the 
+option exists to quantize numerical data and model it using embeddings, however, the results of doing so have not been investigated. -->
 Finally, in the past several years, a new type of neural network architecture based on attention [@Vaswani2017] has
 been successfully used on embeddings in the field of natural language processing and we incorporate attention 
 based models into our predictive modelling example.
