@@ -23,16 +23,16 @@ numeric_cols <- c("total_building_insurance_coverage", "community_rating_system_
 response_col <- "amount_paid_on_building_claim"
 
 set.seed(420)
-cvfolds <- small_data %>%
+cvfolds <- small_data %>% #sample_frac(0.01) %>%
     rsample::vfold_cv(v = 5)
 
 ### t remove later
-
-splits = cvfolds$splits[[1]]
-
-learning_rate = 0.001
-epochs = 10
-batch_size = 5000
+#
+# splits = cvfolds$splits[[1]]
+#
+# learning_rate = 0.001
+# epochs = 10
+# batch_size = 5000
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
