@@ -2,9 +2,16 @@ library(tidyverse)
 library(recipes)
 library(rsample)
 library(torch)
+library(data.table)
+library(keras)
+require(tensorflow)
+tf$compat$v1 = T
 
 source("R/model-utils.R")
 source("R/data-loading.R")
+source("R/keras_working_file.R")
+source("R/keras_working_file_attn.R")
+source("R/keras_working_file_tabtrans.R")
 
 categorical_cols <- c(
     "primary_residence", "basement_enclosure_crawlspace_type",
@@ -18,6 +25,14 @@ response_col <- "amount_paid_on_building_claim"
 set.seed(420)
 cvfolds <- small_data %>%
     rsample::vfold_cv(v = 5)
+
+### t remove later
+
+splits = cvfolds$splits[[1]]
+
+learning_rate = 0.001
+epochs = 10
+batch_size = 5000
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
@@ -33,63 +48,101 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         step_integer(all_nominal(), strict = TRUE, zero_based = TRUE) %>%
         prep(strings_as_factors = TRUE)
 
-    ds <- flood_dataset(juice(rec_nn), categorical_cols, numeric_cols, response_col, env)
+    #ds <- flood_dataset(juice(rec_nn), categorical_cols, numeric_cols, response_col, env)
+    juiced_train_data <- juice(rec_nn)
     baked_test_data <- bake(rec_nn, assessment_data)
-    test_ds <- flood_dataset(baked_test_data, categorical_cols, numeric_cols)
+    for_card = juiced_train_data %>% data.table()
+    for_card_test = baked_test_data %>% data.table()
+    #test_ds <- flood_dataset(baked_test_data, categorical_cols, numeric_cols)
 
-    train_dl <- ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
-    # valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
-    test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
+    get_keras_data = function(dat){
+        dat = dat %>% data.table
+        dat_list = list()
+        for (column in categorical_cols) dat_list[[column]] = as.matrix(dat[, get(column)])
+        dat_list[["num_input"]] = as.matrix(dat[, c(numeric_cols), with = F]) %>% unname
+        dat_list[["num_input"]] = as.matrix(dat[, c(numeric_cols), with = F]) %>% unname
+        dat_list[["col_idx"]] = unname(as.matrix(reshape::untable(data.table(t(1:5)),dat[,.N])))
+        dat_list
+    }
 
-    model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
-        embedding_dim = 2, num_heads = 1, fc_units = 8
-    )
+    get_output = function(train, test, column = "amount_paid_on_building_claim"){
+        min_store = train[, min(get(column))]
+        max_store = train[, max(get(column))]
+        y_train = train[, (get(column) - min_store)/(max_store - min_store)]
+        y_test = test[, (get(column) - min_store)/(max_store - min_store)]
+        return(list(min = min_store, max = max_store, y_train = y_train, y_test = y_test))
 
-    optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
+    }
 
-    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer)
+    output_list = get_output(for_card, for_card_test)
 
-    replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
+    # train_dl <- ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
+    # # valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
+    # test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 
-    preds_tabt <- get_preds(model_tabt, test_dl)
+    train_dl = juiced_train_data %>% get_keras_data()
+    test_dl = baked_test_data %>% get_keras_data()
+    actuals <- assessment_data %>%
+    pull(amount_paid_on_building_claim)
 
 
-    model <- simple_net(
-        env$cardinalities, length(numeric_cols),
-        units = 8, fn_embedding_dim = function(x) 1
-    )
+    # model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
+    #     embedding_dim = 2, num_heads = 1, fc_units = 8
+    # )
+    #
+    # optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
+    #
+    # train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer)
+    #
+    # replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
+    #
+    # preds_tabt <- get_preds(model_tabt, test_dl)
+    #
 
-    optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
+    # model <- simple_net(
+    #     env$cardinalities, length(numeric_cols),
+    #     units = 8, fn_embedding_dim = function(x) 1
+    # )
+    #
+    # optimizer <- optim_adam(model$parameters, lr = learning_rate, weight_decay = 0)
+    #
+    # train_loop(model, train_dl, valid_dl, epochs, optimizer)
+    #
+    # replace_unseen_level_weights_(model$embedder$embeddings)
 
-    train_loop(model, train_dl, valid_dl, epochs, optimizer)
+    simple_nn = get_keras_model(hidden_layer_units = 64, embed = 1)
+    preds_nn <- simple_nn$test_preds
 
-    replace_unseen_level_weights_(model$embedder$embeddings)
+    # model2 <- simple_net(env$cardinalities, length(numeric_cols),
+    #     units = 8,
+    #     fn_embedding_dim = function(x) ceiling(x / 2)
+    # )
+    #
+    # optimizer <- optim_adam(model2$parameters, lr = learning_rate, weight_decay = 0)
+    #
+    # train_loop(model2, train_dl, valid_dl, epochs, optimizer)
+    #
+    # replace_unseen_level_weights_(model2$embedder$embeddings)
 
-    preds_nn <- get_preds(model, test_dl)
+    nn = get_keras_model(hidden_layer_units = 64, embed = 0)
+    preds_nn2 <- nn$test_preds
+#
+#     model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
+#                          units = 8)
+#
+#     optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, weight_decay = 0)
+#
+#     train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer)
+#
+#     replace_unseen_level_weights_(model_simple_attn$embedder$embeddings)
 
-    model2 <- simple_net(env$cardinalities, length(numeric_cols),
-        units = 8,
-        fn_embedding_dim = function(x) ceiling(x / 2)
-    )
+    #preds_simple_attn <- get_preds(model_simple_attn, test_dl)
 
-    optimizer <- optim_adam(model2$parameters, lr = learning_rate, weight_decay = 0)
+    simple_attn = get_keras_model_attn(hidden_layer_units = 64, embed = 0)
+    preds_simple_attn <- simple_attn$test_preds
 
-    train_loop(model2, train_dl, valid_dl, epochs, optimizer)
-
-    replace_unseen_level_weights_(model2$embedder$embeddings)
-
-    preds_nn2 <- get_preds(model2, test_dl)
-
-    model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
-                         units = 8)
-
-    optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, weight_decay = 0)
-
-    train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer)
-
-    replace_unseen_level_weights_(model_simple_attn$embedder$embeddings)
-
-    preds_simple_attn <- get_preds(model_simple_attn, test_dl)
+    tabtrans = get_keras_model_tabtrans(hidden_layer_units = 64, embed = 0)
+    preds_tabt <- tabtrans$test_preds
 
     form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
         basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
@@ -131,14 +184,12 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         type = "response"
     )
 
-    actuals <- assessment_data %>%
-        pull(amount_paid_on_building_claim)
 
     list(
-        model_nn = model,
-        model_nn2 = model2,
-        model_simple_attn = model_simple_attn,
-        model_tabt = model_tabt,
+        model_nn = simple_nn$model,
+        model_nn2 = nn$model,
+        model_simple_attn = simple_attn$model,
+        model_tabt = tabtrans$model,
         rec_nn = rec_nn,
         model_glm = model_glm,
         rec_glm = rec_glm,
