@@ -130,10 +130,12 @@ simple_net_attn <- nn_module(
     }
 )
 
-train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer) {
+train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer, patience = 2) {
     # print(valid_dl)
     # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
     device <- "cpu"
+    best_loss <- NULL
+    counter <- 0
     for (epoch in seq_len(epochs)) {
         model$train()
         train_losses <- c()
@@ -150,21 +152,31 @@ train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer) {
         model$eval()
         valid_losses <- c()
 
-        for (b in enumerate(valid_dl)) {
+        coro::loop(for (b in valid_dl) {
             output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]])
             loss <- nnf_mse_loss(output, b$y$to(device = device))
             valid_losses <- c(valid_losses, loss$item())
-        }
+        })
 
         cat(sprintf(
             "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
             mean(train_losses), mean(valid_losses)
         ))
 
-        # cat(sprintf(
-        #     "Loss at epoch %d: training: %3f\n", epoch,
-        #     mean(train_losses)
-        # ))
+        if (is.null(best_loss)) {
+            best_loss <- mean(valid_losses)
+        } else {
+            if (mean(valid_losses) < best_loss) {
+                best_loss <- mean(valid_losses)
+                counter <- 0
+            } else {
+                counter <- counter + 1
+            }
+        }
+        if (counter >= patience) {
+            cat("**Early stopping!\n")
+            break
+        }
     }
 }
 
