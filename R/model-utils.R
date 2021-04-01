@@ -147,24 +147,24 @@ train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer) {
             train_losses <- c(train_losses, loss$item())
         })
 
-        # model$eval()
-        # valid_losses <- c()
+        model$eval()
+        valid_losses <- c()
 
-        # for (b in enumerate(valid_dl)) {
-        #     output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))
-        #     loss <- nnf_mse_loss(output, b$y$to(device = device))
-        #     valid_losses <- c(valid_losses, loss$item())
-        # }
-
-        # cat(sprintf(
-        #     "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
-        #     mean(train_losses), mean(valid_losses)
-        # ))
+        for (b in enumerate(valid_dl)) {
+            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]])
+            loss <- nnf_mse_loss(output, b$y$to(device = device))
+            valid_losses <- c(valid_losses, loss$item())
+        }
 
         cat(sprintf(
-            "Loss at epoch %d: training: %3f\n", epoch,
-            mean(train_losses)
+            "Loss at epoch %d: training: %3f, validation: %3f\n", epoch,
+            mean(train_losses), mean(valid_losses)
         ))
+
+        # cat(sprintf(
+        #     "Loss at epoch %d: training: %3f\n", epoch,
+        #     mean(train_losses)
+        # ))
     }
 }
 
