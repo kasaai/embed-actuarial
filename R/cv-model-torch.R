@@ -39,14 +39,19 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         categorical_cols, numeric_cols, coverage_col, response_col, env
     )
     baked_test_data <- bake(rec_nn, assessment_data)
+
     test_ds <- flood_dataset(
         baked_test_data %>% mutate(coverage = assessment_data$total_building_insurance_coverage), 
         categorical_cols, numeric_cols, coverage_col
     )
 
-    train_dl <- ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
-    # valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
-    valid_dl <- NULL
+    train_indx <- sample(length(ds), 0.8 * length(ds))
+    valid_indx <- seq_len(length(ds)) %>% setdiff(train_indx)
+    train_ds <- dataset_subset(ds, train_indx)
+    valid_ds <- dataset_subset(ds, valid_indx)
+
+    train_dl <- train_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
+    valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
     test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 
     model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
@@ -165,7 +170,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 }
 
 cv_results <- cvfolds$splits %>%
-    lapply(function(x) model_analyze_assess(x, 0.01, 10, 1000))
+    lapply(function(x) model_analyze_assess(x, 0.01, 1, 1000))
 
 cv_results %>%
     map(function(x) {
