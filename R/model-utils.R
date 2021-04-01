@@ -1,6 +1,6 @@
 flood_dataset <- dataset(
     "flood",
-    initialize = function(df, categorical_cols, numeric_cols, response_col = NULL, env = NULL) {
+    initialize = function(df, categorical_cols, numeric_cols, coverage_col, response_col = NULL, env = NULL) {
         # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
         device <- "cpu"
         self$is_train <- if (!is.null(response_col)) TRUE else FALSE
@@ -12,6 +12,10 @@ flood_dataset <- dataset(
             assign("cardinalities", sapply(df[categorical_cols], function(x) max(x) + 2), envir = env)
         }
         self$xnum <- df[numeric_cols] %>%
+            as.matrix() %>%
+            torch_tensor(device = device)
+        
+        self$xcoverage <- df[coverage_col] %>%
             as.matrix() %>%
             torch_tensor(device = device)
 
@@ -26,13 +30,14 @@ flood_dataset <- dataset(
     .getitem = function(i) {
         xcat <- self$xcat[i, ]
         xnum <- self$xnum[i, ]
+        xcoverage <- self$xcoverage[i, ]
 
         if (self$is_train) {
             y <- self$y[i]
 
-            list(x = list(xcat, xnum), y = y)
+            list(x = list(xcat, xnum, xcoverage), y = y)
         } else {
-            list(x = list(xcat, xnum))
+            list(x = list(xcat, xnum, xcoverage))
         }
     },
     .length = function() {
@@ -73,21 +78,20 @@ simple_net <- nn_module(
         in_units <- sum_embedding_dim + num_numerical
         self$fc <- nn_linear(in_units, units)
         self$output <- nn_linear(units, 1)
-        # self$output <- nn_linear(in_units + units, 1)
         self
     },
-    forward = function(xcat, xnum) {
+    forward = function(xcat, xnum, xcoverage) {
         embedded <- self$embedder(xcat)
         all <- torch_cat(list(embedded, xnum$to(dtype = torch_float())), dim = 2)
         out <- all %>%
             self$fc() %>%
             nnf_relu()
-        # torch_cat(list(all, out), dim = 2) %>%
-        #     self$output() %>%
-        #     nnf_softplus()
-        out %>%
+
+        ratio <- out %>%
             self$output() %>%
-            nnf_softplus()
+            nnf_sigmoid()
+
+        ratio * xcoverage
     }
 )
 
@@ -103,12 +107,12 @@ simple_net_attn <- nn_module(
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
         self$embed_dim <- fn_embedding_dim()
-        self$attn <- nn_multihead_attention(embed_dim = 5, num_heads = 1)
+        self$attn <- nn_multihead_attention(embed_dim = embed_dim, num_heads = 1)
         self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
         self$output <- nn_linear(units, 1)
         self
     },
-    forward = function(xcat, xnum) {
+    forward = function(xcat, xnum, xcoverage) {
         embedded <- self$embedder(xcat)
         shapes <- embedded$shape
         embedded_reshape <- embedded$view(list(embedded$shape[1], self$embed_dim, self$embed_dim))
@@ -116,15 +120,18 @@ simple_net_attn <- nn_module(
         embedded_attended <- embedded_attended[[1]]
         embedded_attended <- embedded_attended$view(list(embedded$shape[1], self$embed_dim * self$embed_dim))
         all <- torch_cat(list(embedded_attended, xnum$to(dtype = torch_float())), dim = 2)
-        all %>%
+        ratio <- all %>%
             self$fc() %>%
             nnf_relu() %>%
             self$output() %>%
-            nnf_softplus()
+            nnf_sigmoid()
+
+        ratio * xcoverage
     }
 )
 
-train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
+train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer) {
+    # print(valid_dl)
     # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
     device <- "cpu"
     for (epoch in seq_len(epochs)) {
@@ -133,7 +140,7 @@ train_loop <- function(model, train_dl, valid_dl, epochs, optimizer) {
 
         coro::loop(for (b in train_dl) {
             optimizer$zero_grad()
-            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))
+            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]])
             loss <- nnf_mse_loss(output, b$y$to(device = device))
             loss$backward()
             optimizer$step()
@@ -169,7 +176,7 @@ get_preds <- function(model, dl) {
     for (b in enumerate(dl)) {
         preds <- c(
             preds,
-            model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device))$to(device = "cpu") %>% as.array()
+            model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]])$to(device = "cpu") %>% as.array()
         )
     }
     preds
@@ -285,7 +292,7 @@ tabtransformer <- nn_module(
         # self$to(device = device)
         self
     },
-    forward = function(xcat, xnum) {
+    forward = function(xcat, xnum, xcoverage) {
         xcat_out <- self$col_embedder(xcat)
         xcat_out <- self$attn(xcat_out, xcat_out, xcat_out)[[1]] + xcat_out
         xcat_out <- self$lnorm1(xcat_out)
@@ -296,7 +303,9 @@ tabtransformer <- nn_module(
         xcat_out <- self$lnorm2(xcat_out + xcat_out_a)
         xcat_out <- xcat_out$view(c(-1, xcat_out$size(2) * xcat_out$size(3)))
         concat <- torch_cat(list(xcat_out, xnum), dim = 2)
-        self$mlp1(concat)
+        ratio <- self$mlp1(concat) %>%
+            nnf_sigmoid()
+        ratio * xcoverage
     }
 )
 
