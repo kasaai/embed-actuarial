@@ -744,12 +744,12 @@ the formats of the visualizations --- basic line and scatter plots --- even more
 helpful in explaining the concept to stakeholders.
 
 For Model 2, the neural network with one-dimensional embeddings, the task is simple: we can simply plot the levels
-on a line, as in Figure \@ref(fig:num-floors). In the case of `flood_zone`, since we happen to have the luxury of knowing a
+on a line, as in Figure \@ref(fig:occ-type). In the case of `flood_zone`, since we happen to have the luxury of knowing a
 priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the model 
 mapped them.
 
-```{r num-floors, echo=FALSE, fig.cap="Number of floors", out.width = "80%", fig.align="center"}
-knitr::include_graphics("images/num_floors.png")
+```{r occ-type, echo=FALSE, fig.cap="Occupancy type", out.width = "80%", fig.align="center"}
+knitr::include_graphics("images/occupancy_type.png")
 ```
 
 ```{r flood-zone, echo = FALSE, fig.cap="Flood zone embeddings", out.width = "60%", fig.align = "center"}
