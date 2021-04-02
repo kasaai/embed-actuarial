@@ -2,9 +2,12 @@ library(tidyverse)
 library(recipes)
 library(rsample)
 library(torch)
+library(tabnet)
 
 source("R/model-utils.R")
 source("R/data-loading.R")
+
+dir.create("model_files")
 
 categorical_cols <- c(
     "primary_residence", "basement_enclosure_crawlspace_type",
@@ -18,7 +21,7 @@ coverage_col <- "coverage"
 
 set.seed(420)
 cvfolds <- small_data %>%
-    rsample::vfold_cv(v = 2)
+    rsample::vfold_cv(v = 5)
 
 model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_size = 5000, ...) {
     env <- new.env()
@@ -61,12 +64,14 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
 
-    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer)
+    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer, "tabt", patience = 5)
+
+    torch_load("model_files/tabt.pt")
 
     replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
 
     preds_tabt <- get_preds(model_tabt, test_dl)
-    
+
     # Model02
     model <- simple_net(
         env$cardinalities, length(numeric_cols),
@@ -75,7 +80,9 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     optimizer <- optim_adam(model$parameters, lr = learning_rate, amsgrad = TRUE)
 
-    train_loop(model, train_dl, valid_dl, epochs, optimizer)
+    train_loop(model, train_dl, valid_dl, epochs, optimizer, "Model02", patience = 5)
+
+    torch_load("model_files/Model02.pt")
 
     replace_unseen_level_weights_(model$embedder$embeddings)
 
@@ -89,7 +96,9 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     optimizer <- optim_adam(model2$parameters, lr = learning_rate, amsgrad = TRUE)
 
-    train_loop(model2, train_dl, valid_dl, epochs, optimizer)
+    train_loop(model2, train_dl, valid_dl, epochs, optimizer, "Model04", patience = 5)
+
+    torch_load("model_files/Model04.pt")
 
     replace_unseen_level_weights_(model2$embedder$embeddings)
 
@@ -110,7 +119,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         prep(strings_as_factors = TRUE)
 
     model_tabnet <- tabnet_fit(form,
-        data = juice(rec_tabnet), epochs = 5,
+        data = juice(rec_tabnet), epochs = 10,
         num_independent = 1, num_shared = 1, num_steps = 3,
         decision_width = 1, attention_width = 1,
         learn_rate = 1, verbose = TRUE, batch_size = 2000,
@@ -119,17 +128,21 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     preds_tabnet <- predict(model_tabnet, bake(rec_tabnet, assessment_data))$.pred
 
-    # model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
-    #                      units = 32)
+     model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
+                          units = 8)
 
-    # optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, amsgrad = TRUE)
+     optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, amsgrad = TRUE)
 
-    # train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer)
+     train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer, "simple_attn", patience = 5)
 
-    # replace_unseen_level_weights_(model_simple_attn$embedder$embeddings)
+     torch_load("model_files/simple_attn.pt")
 
-    # preds_simple_attn <- get_preds(model_simple_attn, test_dl)
+     replace_unseen_level_weights_(model_simple_attn$embedder$embeddings)
 
+     preds_simple_attn <- get_preds(model_simple_attn, test_dl)
+
+     print("here are the preds")
+     print(preds_simple_attn[1])
 
     rec_glm <- recipe(form,
         data = analysis_data
@@ -173,7 +186,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     list(
         model_nn = model,
         model_nn2 = model2,
-        # model_simple_attn = model_simple_attn,
+        model_simple_attn = model_simple_attn,
         model_tabt = model_tabt,
         model_tabnet = model_tabnet,
         rec_nn = rec_nn,
@@ -185,7 +198,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         actuals = actuals,
         preds_nn = preds_nn,
         preds_nn2 = preds_nn2,
-        # preds_simple_attn = preds_simple_attn,
+        preds_simple_attn = preds_simple_attn,
         preds_tabt = preds_tabt,
         preds_tabnet = preds_tabnet,
         preds_glm = preds_glm,
@@ -224,6 +237,6 @@ dir.create("model_files")
 saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
 saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
 saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
-torch_save(cv_results[[1]]$model_nn, "model_files/nn1.pt")
-torch_save(cv_results[[1]]$model_nn2, "model_files/nn2.pt")
-torch_save(cv_results[[1]]$model_simple_attn, "model_files/nn_simple_attn.pt")
+# torch_save(cv_results[[1]]$model_nn, "model_files/nn1.pt")
+# torch_save(cv_results[[1]]$model_nn2, "model_files/nn2.pt")
+# torch_save(cv_results[[1]]$model_simple_attn, "model_files/nn_simple_attn.pt")

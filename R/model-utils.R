@@ -14,7 +14,7 @@ flood_dataset <- dataset(
         self$xnum <- df[numeric_cols] %>%
             as.matrix() %>%
             torch_tensor(device = device)
-        
+
         self$xcoverage <- df[coverage_col] %>%
             as.matrix() %>%
             torch_tensor(device = device)
@@ -130,7 +130,7 @@ simple_net_attn <- nn_module(
     }
 )
 
-train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer, patience = 2) {
+train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer, patience = 2, model_name) {
     # print(valid_dl)
     # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
     device <- "cpu"
@@ -165,9 +165,13 @@ train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer, pati
 
         if (is.null(best_loss)) {
             best_loss <- mean(valid_losses)
+            torch_save(model, paste0("model_files/", model_name, ".pt"))
+            cat("**Saved model\n")
         } else {
             if (mean(valid_losses) < best_loss) {
                 best_loss <- mean(valid_losses)
+                torch_save(model, paste0("model_files/", model_name, ".pt"))
+                cat("**Saved model\n")
                 counter <- 0
             } else {
                 counter <- counter + 1
