@@ -8,3 +8,12 @@ manuscript/manuscript.log
 manuscript/manuscript.tex
 internal
 data
+model_files/glm1.rds
+model_files/glm2.rds
+model_files/Model02.pt
+model_files/Model04.pt
+model_files/nn1.pt
+model_files/nn2.pt
+model_files/rec_nn_key.rds
+model_files/simple_attn.pt
+model_files/tabt.pt
