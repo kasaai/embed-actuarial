@@ -500,7 +500,7 @@ knitr::kable(
 
 The response variable we take from the dataset is "Amount Paid on Building Claim", which is a numeric variable.
 
-For our experiments, we set up a 10-fold cross validation scheme that is applied to each of the models
+For our experiments, we set up a 5-fold cross validation scheme that is applied to each of the models
 we introduce. In Sections \ref{models} and \ref{interpretations}, the tables and figures are based on a single fold of 
 the cross validation split. In Section \ref{training-inference}, we provide the cross-validated performance
 metrics of each of the models.
@@ -851,18 +851,44 @@ knitr::include_graphics("images/flood_zone_tsne.png")
 
 For the GLMs, Models 1 and 3, we follow the standard optimization procedure using iteratively reweighted least 
 squares (IWLS) without regularization. For the neural networks, Models 2 and 4, we utilize the \texttt{Adam}
-optimizer [@Kingma2014] with a learning rate of TODO, and train the each network for TODO epochs with a batch
-size of TODO.
+optimizer [@Kingma2014] with a learning rate of 0.01 and a minibatch size of 1000. We split the training set into
+analysis and assessment sets, containing 80% and 20% of the rows, respectively. We train on the analysis set for a
+maximum of 15 epochs, and stop early if the loss on the assessment set does not improve for 5 epochs.
 
 During inference, or scoring, care must be taken to accommodate the categorical levels that are unseen
-during training. While we allow for an extra key in the embedding dictionary (TODO: mention this earlier), the initial
+during training. While we allow for an extra key in the embedding dictionary, the initial
 weights are not updated during training, which could lead to nonsensical predictions in the validation or test sets. To
 circumvent this issue, before applying the trained model but after the final optimization epoch, we update the weights
 for the unseen levels manually. In practice, a common approach is to take an average value 
 of some sort of the weights of theother levels. In our case, we take the median (if there are multiple, the lower of
 the two), but a mean, mean weighted by frequency of observations, or trimmed mean could be used.
 
-In Table TODO, we exhibit the cross-validated performance metrics of each of the models.
+In Table \@ref(tab:cv-results), we exhibit the cross-validated performance metrics of each of the models. We report
+both the root mean squared error (RMSE) and the mean absolute error (MAE); we note that these are just a couple of many potential metrics to use, and are so chosen for their interpretability and prevalence in the literature for comparing
+different types of models. Recall that, between the two metrics, RMSE penalizes large mispredictions than MAE. Also,
+in the optimization process, GLM with a gamma distribution optimizes the deviance, rather than MSE directly.
+
+We see that the neural networks generally outperform the GLMs; however, what is more interesting is that using learned 
+embeddings in place of categorical levels improves the GLM, at least from the RMSE perspective.
+
+While linear regression (i.e., the specific case of GLM with a gaussian distribution and identity link function) is not
+commonly used for severity modeling, we throw it into the mix as a benchmark, a practice we recommend in order to
+check reasonablness of other models' results. Since it is possible for a linear
+regression to output negative values, we cap the predictions below by 0.01 during scoring. Somewhat surprisingly, in 
+the problem we
+are considering, it performs similary to the more complex neural network models in the RMSE metric (which it optimizes
+for, as the unit deviance of the normal distribution corresponds with MSE.) Of course, this is not to discredit neural
+networks or GLMs, as the experiments are performed without extensive hyperparameter tuning or feature engineering.
+
+Table: (\#tab:cv-results) Cross validation results.
+
+|Model                                                                         |   RMSE|    MAE|
+|:-----------------------------------------------------------------------------|------:|------:|
+|Model 1: GLM (gamma/log link)                                                 | 65,138| 38,367|
+|Model 2: MLP with 1-dimensional embeddings                                    | 60,979| 37,605|
+|Model 3: GLM (gamma/log link), categorical variables replaced with embeddings | 63,170| 38,360|
+|Model 4: MLP with multidimensional embeddings                                 | 60,973| 37,574|
+|Linear regression, predictions capped below at 0.01                           | 60,879| 38,431|
 
 <!-- # Extending the model {#extend}
 

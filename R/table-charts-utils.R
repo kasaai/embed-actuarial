@@ -6,7 +6,7 @@ extract_embeddings <- function(model, key) {
         setNames(categorical_cols) %>%
         purrr::imap(function(m, v) {
             outputs <- level_integer_mappings[[v]]$integer %>%
-                torch_tensor(device = "cuda") %>%
+                torch_tensor(device = "cpu") %>%
                 m() %>%
                 (function(x) x$to(device = "cpu")) %>%
                 as.array()
