@@ -41,7 +41,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     baked_test_data <- bake(rec_nn, assessment_data)
 
     test_ds <- flood_dataset(
-        baked_test_data %>% mutate(coverage = assessment_data$total_building_insurance_coverage), 
+        baked_test_data %>% mutate(coverage = assessment_data$total_building_insurance_coverage),
         categorical_cols, numeric_cols, coverage_col
     )
 
@@ -54,6 +54,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
     test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 
+    # tabtransformer
     model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
         embedding_dim = 8, num_heads = 3, fc_units = 8
     )
@@ -65,8 +66,8 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
 
     preds_tabt <- get_preds(model_tabt, test_dl)
-
-
+    
+    # Model02
     model <- simple_net(
         env$cardinalities, length(numeric_cols),
         units = 8, fn_embedding_dim = function(x) 1
@@ -80,6 +81,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     preds_nn <- get_preds(model, test_dl)
 
+    # Model04
     model2 <- simple_net(env$cardinalities, length(numeric_cols),
         units = 8,
         fn_embedding_dim = function(x) ceiling(x / 2)
@@ -93,6 +95,30 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     preds_nn2 <- get_preds(model2, test_dl)
 
+    # formula used for both tabnet and glm
+    form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
+        basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
+        occupancy_type + flood_zone + primary_residence + community_rating_system_discount
+
+    # tabnet
+    rec_tabnet <- recipe(amount_paid_on_building_claim ~ .,
+        data = analysis_data %>%
+            select(-loss_proportion, -reported_zip_code)
+    ) %>%
+        step_normalize(all_numeric(), -all_outcomes()) %>%
+        step_novel(all_nominal()) %>%
+        prep(strings_as_factors = TRUE)
+
+    model_tabnet <- tabnet_fit(form,
+        data = juice(rec_tabnet), epochs = 5,
+        num_independent = 1, num_shared = 1, num_steps = 3,
+        decision_width = 1, attention_width = 1,
+        learn_rate = 1, verbose = TRUE, batch_size = 2000,
+        valid_split = 0.2
+    )
+
+    preds_tabnet <- predict(model_tabnet, bake(rec_tabnet, assessment_data))$.pred
+
     # model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
     #                      units = 32)
 
@@ -104,9 +130,6 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     # preds_simple_attn <- get_preds(model_simple_attn, test_dl)
 
-    form <- amount_paid_on_building_claim ~ total_building_insurance_coverage +
-        basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
-        occupancy_type + flood_zone + primary_residence + community_rating_system_discount
 
     rec_glm <- recipe(form,
         data = analysis_data
@@ -152,6 +175,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         model_nn2 = model2,
         # model_simple_attn = model_simple_attn,
         model_tabt = model_tabt,
+        model_tabnet = model_tabnet,
         rec_nn = rec_nn,
         model_glm = model_glm,
         rec_glm = rec_glm,
@@ -163,6 +187,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         preds_nn2 = preds_nn2,
         # preds_simple_attn = preds_simple_attn,
         preds_tabt = preds_tabt,
+        preds_tabnet = preds_tabnet,
         preds_glm = preds_glm,
         preds_glm_gaussian = preds_glm_gaussian,
         preds_glm2 = preds_glm2
@@ -179,6 +204,7 @@ cv_results %>%
             rmse_nn2 = rmse(x$actuals, pmax(x$preds_nn2, 0.01)),
             rmse_simple_attn = rmse(x$actuals, x$preds_simple_attn),
             rmse_tabt = rmse(x$actuals, x$preds_tabt),
+            rmse_tabnet = rmse(x$actuals, x$preds_tabnet),
             rmse_glm = rmse(x$actuals, x$preds_glm),
             rmse_glm2 = rmse(x$actuals, x$preds_glm2),
             rmse_glm_gaussian = rmse(x$actuals, pmax(x$preds_glm_gaussian, 0.01)),
@@ -187,6 +213,7 @@ cv_results %>%
             mgd_nn2 = mean_gamma_deviance(x$actuals, x$preds_nn2),
             mgd_simple_attn = mean_gamma_deviance(x$actuals, x$preds_simple_attn),
             mgd_tabt = mean_gamma_deviance(x$actuals, x$preds_tabt),
+            mgd_tabnet = mean_gamma_deviance(x$actuals, x$preds_tabnet),
             mgd_glm = mean_gamma_deviance(x$actuals, x$preds_glm),
             mgd_glm2 = mean_gamma_deviance(x$actuals, x$preds_glm2),
             mgd_glm_gaussian = mean_gamma_deviance(x$actuals, pmax(x$preds_glm_gaussian, 0.01))
