@@ -64,9 +64,9 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
 
-    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer, "tabt", patience = 5)
+    train_loop(model_tabt, train_dl, valid_dl, epochs, optimizer, patience = 5, "tabt")
 
-    torch_load("model_files/tabt.pt")
+    model_tabt = torch_load("model_files/tabt.pt")
 
     replace_unseen_level_weights_(model_tabt$col_embedder$embeddings)
 
@@ -80,9 +80,9 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     optimizer <- optim_adam(model$parameters, lr = learning_rate, amsgrad = TRUE)
 
-    train_loop(model, train_dl, valid_dl, epochs, optimizer, "Model02", patience = 5)
+    train_loop(model, train_dl, valid_dl, epochs, optimizer, patience = 5, "Model02")
 
-    torch_load("model_files/Model02.pt")
+    model = torch_load("model_files/Model02.pt")
 
     replace_unseen_level_weights_(model$embedder$embeddings)
 
@@ -96,9 +96,9 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
     optimizer <- optim_adam(model2$parameters, lr = learning_rate, amsgrad = TRUE)
 
-    train_loop(model2, train_dl, valid_dl, epochs, optimizer, "Model04", patience = 5)
+    train_loop(model2, train_dl, valid_dl, epochs, optimizer, patience = 5, "Model04")
 
-    torch_load("model_files/Model04.pt")
+    model2 = torch_load("model_files/Model04.pt")
 
     replace_unseen_level_weights_(model2$embedder$embeddings)
 
@@ -133,16 +133,13 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
      optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, amsgrad = TRUE)
 
-     train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer, "simple_attn", patience = 5)
+     train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer, patience = 5, "simple_attn")
 
-     torch_load("model_files/simple_attn.pt")
+     model_simple_attn = torch_load("model_files/simple_attn.pt")
 
      replace_unseen_level_weights_(model_simple_attn$embedder$embeddings)
 
      preds_simple_attn <- get_preds(model_simple_attn, test_dl)
-
-     print("here are the preds")
-     print(preds_simple_attn[1])
 
     rec_glm <- recipe(form,
         data = analysis_data
