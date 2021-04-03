@@ -587,18 +587,11 @@ Table: (\#tab:relativities) Excerpt of relativities for Model 1.
 For Model 2, we build a feedforward neural network, whose architecture is shown in Figure \@ref(fig:nn-1). 
 The categorical inputs go through one-dimensional embedding
 layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which
-have been normalized in data pre-processing, before being sent to a hidden linear layer of 64 units. A ReLU activation,
-
-\begin{equation}
-x \mapsto \max(0, x),
-\end{equation}
-
-is then applied to the outputs before they are sent to a final output layer resulting in a scalar. To constrain
-predictions to be positive, we apply softplus activation, which is defined to be
-
-\begin{equation}
-x \mapsto \log(1 + e^x). 
-\end{equation}
+have been normalized in data pre-processing, before being passed through a feedforward layer (with ReLU activation)
+ to obtain a scalar
+value between 0 and 1, as constrained by a sigmoid output activation. This scalar output represents the proportion of
+coverage amount that is paid out, so we multiply it by the unnormalized dollar amount of the coverage amount to obtain
+our prediction of the claims paid.
 
 ```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
