@@ -59,7 +59,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
         env$cardinalities, length(numeric_cols),
         units = 16, fn_embedding_dim = function(x) 1
     )
-    
+
     # model <- model$to(device = "cuda")
 
     optimizer <- optim_adam(model$parameters, lr = learning_rate, amsgrad = TRUE)
@@ -160,13 +160,27 @@ cv_results %>%
             rmse_glm2 = rmse(x$actuals, x$preds_glm2),
             rmse_glm_gaussian = rmse(x$actuals, pmax(x$preds_glm_gaussian, 0.01)),
             rmse_zeros = rmse(x$actuals, 0),
-            mae_nn   = mae(x$actuals, x$preds_nn),
-            mae_nn2  = mae(x$actuals, x$preds_nn2),
-            mae_glm  = mae(x$actuals, x$preds_glm),
+            mae_nn = mae(x$actuals, x$preds_nn),
+            mae_nn2 = mae(x$actuals, x$preds_nn2),
+            mae_glm = mae(x$actuals, x$preds_glm),
             mae_glm2 = mae(x$actuals, x$preds_glm2),
             mae_glm_gaussian = mae(x$actuals, pmax(x$preds_glm_gaussian, 0.01))
         )
-    })
+    }) %>%
+    transpose() %>%
+    as_tibble() %>%
+    pivot_longer(everything()) %>%
+    separate(name, into = c("metric", "mod"), sep = "_", extra = "merge") %>%
+    pivot_wider(names_from = "metric") %>%
+    left_join(model_names_mapping, by = "mod") %>%
+    select(-mod) %>%
+    arrange(id) %>%
+    select(Model, rmse, mae) %>%
+    rename(RMSE = rmse, MAE = mae) %>%
+    knitr::kable(digits = 0, format.args = list(
+        big.mark = ",",
+        scientific = FALSE
+    ), format = "pipe")
 
 dir.create("model_files")
 saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
