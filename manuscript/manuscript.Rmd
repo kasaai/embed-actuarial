@@ -778,9 +778,12 @@ $\mathbf{C_X} \equiv \frac{1}{n}\mathbf{XX^T}$. In practice, numerical procedure
 which we use, utilize singular value decomposition (SVD) to compute the eigenvectors.
 
 In Figure \@ref(fig:flood-zone-pca), we plot the learned embeddings for `flood_zone` in Model 3 on the coordinate
-system defined by the first two principle components. (TODO: add commentary after update pic)
+system defined by the first two principle components. In our case, however, we are not able to identify discernable
+clusters in the plot. From inspecting the matrix decomposition results, we see that the cumulative proportion of
+variance for the first two principal components are just 0.18, which may suggest that perhaps PCA is not the most
+appropriate dimensionality reduction technique in this case.
 
-```{r flood-zone-pca, echo = FALSE, fig.cap="Flood zone PCA", out.width = "60%", fig.align = "center"}
+```{r flood-zone-pca, echo = FALSE, fig.cap="Flood zone PCA", out.width = "50%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_pca.png")
 ```
 
@@ -839,9 +842,15 @@ and $P_i$ is the Gaussian parameterized by $x_i$ and $\sigma_i$. During training
 perpelxity corresponding to the user input. Finally, the objective as stated in Equation \@ref(eq:tsne-obj) is differentiable, and is trained via gradient descent. 
 
 While t-SNE is a powerful visualization technique, there are a few points the modeler should be mindful of in practice.
-First, the resulting plot can be very sensitive to the perplexity hyperparameter. 
+We refer the reader to @wattenberg2016how for a more thorough discussion, but stress here that the resulting plot can
+be very sensitive to the perplexity hyperparameter. In addition, for our use case, which is to explore the
+learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our
+reaosnable range of hyperparameter values need to be adjusted down.
 In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in
-Model 3 with various perplexity settings. (TODO: add more commentary).
+Model 3 with various perplexity settings: 0.1, 0.5, 1.0, and 10; the learning rate and the number of steps are fixed at
+100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In
+particular, flood zone D appears in its own cluster, which implies it is far away from other levels in the embedding
+space. When the perplexity is set to 10 (and beyond), however, we lose the geometric properties.
 
 ```{r flood-zone-tsne, echo = FALSE, fig.cap="Flood zone t-SNE", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_tsne.png")

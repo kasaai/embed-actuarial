@@ -17,3 +17,16 @@ extract_embeddings <- function(model, key) {
             )
         })
 }
+
+make_tsne_plot <- function(wts, lbls, perplexity) {
+    tsne_out <- Rtsne::Rtsne(wts, pca = FALSE, perplexity = perplexity, eta = 100, theta = 0, max_iter = 10000)
+    p <- tsne_out$Y %>%
+        as.data.frame() %>%
+        mutate(class = lbls) %>%
+        mutate(prefix = substr(lbls, 1, 1)) %>%
+        filter(class != "new") %>%
+        ggplot(aes(x = V1, y = V2, color = prefix)) +
+        geom_point() +
+        theme_classic()
+    p
+}
