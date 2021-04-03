@@ -597,9 +597,8 @@ our prediction of the claims paid.
 knitr::include_graphics("images/nn.png")
 ```
 
-With a single hidden layer, this architecture is the simplest nontrivial neural network; without the hidden layer and
-corresponding ReLU activation, we would actually recover a GLM structure where the link function is the output 
-activation. 
+With a single hidden layer, this architecture is relatively simple; without the hidden layer and
+corresponding ReLU activation, we would actually recover a logistic regression structure. 
 The choice of one for the embedding dimension is also due to simplicity: it is easily interpretable as the 
 representation
 of each factor level as a point on the real number line, also, the trained embeddings are easily incorporated into a GLM
