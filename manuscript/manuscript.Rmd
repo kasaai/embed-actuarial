@@ -465,8 +465,9 @@ of the Federal Emergency Management Agency (FEMA)[^9]. Two datasets are made ava
 with exposure information, and a claims dataset with claims transactions, including paid amounts. Because there is no 
 way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While 
 the 
-complete dataset contains over two million transactions, for the purposes of our experiments we limit ourselves to data 
-from 2000 to August 2019, which amounts to approximately 1.4 million claims. The dataset can be downloaded from 
+complete dataset contains over two million transactions, for the purposes of our experiments, we limit ourselves to 
+data from 2000 to August 2019 and further subsample 100K data points to make experiments feasiable on a CPU.
+ The dataset can be downloaded from 
 Cellar[^10] The dataset includes a rich variety of variables, from occupancy type to coarse coordinates. For our 
 models, 
 we work with a few selected variables that represent continuous and discrete variables of low and high cardinalities, 
@@ -587,26 +588,19 @@ Table: (\#tab:relativities) Excerpt of relativities for Model 1.
 For Model 2, we build a feedforward neural network, whose architecture is shown in Figure \@ref(fig:nn-1). 
 The categorical inputs go through one-dimensional embedding
 layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which
-have been normalized in data pre-processing, before being sent to a hidden linear layer of 64 units. A ReLU activation,
-
-\begin{equation}
-x \mapsto \max(0, x),
-\end{equation}
-
-is then applied to the outputs before they are sent to a final output layer resulting in a scalar. To constrain
-predictions to be positive, we apply softplus activation, which is defined to be
-
-\begin{equation}
-x \mapsto \log(1 + e^x). 
-\end{equation}
+have been normalized in data pre-processing, before being passed through a feedforward layer (with 8 hidden units 
+and ReLU activation)
+ to obtain a scalar
+value between 0 and 1, as constrained by a sigmoid output activation. This scalar output represents the proportion of
+coverage amount that is paid out, so we multiply it by the unnormalized dollar amount of the coverage amount to obtain
+our prediction of the claims paid, which we evaluate using the mean squared error (MSE) loss function.
 
 ```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
 ```
 
-With a single hidden layer, this architecture is the simplest nontrivial neural network; without the hidden layer and
-corresponding ReLU activation, we would actually recover a GLM structure where the link function is the output 
-activation. 
+With a single hidden layer, this architecture is relatively simple; without the hidden layer and
+corresponding ReLU activation, we would actually recover a logistic regression structure. 
 The choice of one for the embedding dimension is also due to simplicity: it is easily interpretable as the 
 representation
 of each factor level as a point on the real number line, also, the trained embeddings are easily incorporated into a GLM
