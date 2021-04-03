@@ -28,9 +28,9 @@ flood_dataset <- dataset(
         self
     },
     .getitem = function(i) {
-        xcat <- self$xcat[i, ]
-        xnum <- self$xnum[i, ]
-        xcoverage <- self$xcoverage[i, ]
+        xcat <- self$xcat[i, , drop = TRUE]
+        xnum <- self$xnum[i, , drop = TRUE]
+        xcoverage <- self$xcoverage[i]
 
         if (self$is_train) {
             y <- self$y[i]
@@ -142,7 +142,7 @@ train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer, pati
 
         coro::loop(for (b in train_dl) {
             optimizer$zero_grad()
-            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]])
+            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]]$to(device = device))
             loss <- nnf_mse_loss(output, b$y$to(device = device))
             loss$backward()
             optimizer$step()
@@ -153,7 +153,7 @@ train_loop <- function(model, train_dl, valid_dl = NULL, epochs, optimizer, pati
         valid_losses <- c()
 
         coro::loop(for (b in valid_dl) {
-            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]])
+            output <- model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]]$to(device = device))
             loss <- nnf_mse_loss(output, b$y$to(device = device))
             valid_losses <- c(valid_losses, loss$item())
         })
@@ -192,7 +192,11 @@ get_preds <- function(model, dl) {
     for (b in enumerate(dl)) {
         preds <- c(
             preds,
-            model(b$x[[1]]$to(device = device), b$x[[2]]$to(device = device), b$x[[3]])$to(device = "cpu") %>% as.array()
+            model(
+                b$x[[1]]$to(device = device),
+                b$x[[2]]$to(device = device),
+                b$x[[3]]$to(device = device)
+            )$to(device = "cpu") %>% as.array()
         )
     }
     preds
@@ -327,6 +331,10 @@ tabtransformer <- nn_module(
 
 rmse <- function(actuals, preds) {
     sqrt(sum((actuals - preds)^2) / length(actuals))
+}
+
+mae <- function(actuals, preds) {
+    mean(abs(actuals - preds))
 }
 
 mean_gamma_deviance <- function(actuals, preds) {
