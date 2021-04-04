@@ -466,15 +466,13 @@ with exposure information, and a claims dataset with claims transactions, includ
 way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While 
 the 
 complete dataset contains over two million transactions, for the purposes of our experiments, we limit ourselves to 
-data from 2000 to August 2019 and further subsample 100K data points to make experiments feasiable on a CPU.
- The dataset can be downloaded from 
-Cellar[^10] The dataset includes a rich variety of variables, from occupancy type to coarse coordinates. For our 
+data from 2000 to August 2019 and further subsample 100K data points to make experiments feasible on a CPU.
+The dataset includes a rich variety of variables, from occupancy type to flood zone. For our 
 models, 
 we work with a few selected variables that represent continuous and discrete variables of low and high cardinalities, 
 which we list in Table \@ref(tab:variables)
 
 [^9]: https://www.fema.gov/about/reports-and-data/openfema
-[^10]: https://cellar.kasa.ai 
 
 ```{r variables, results='asis', message=FALSE, echo = FALSE}
 library(magrittr)
@@ -502,7 +500,7 @@ knitr::kable(
 The response variable we take from the dataset is "Amount Paid on Building Claim", which is a numeric variable.
 
 For our experiments, we set up a 5-fold cross validation scheme that is applied to each of the models
-we introduce. In Sections \ref{models} and \ref{interpretations}, the tables and figures are based on a single fold of 
+we introduce. In Sections \ref{models} and \ref{interpretation}, the tables and figures are based on a single fold of 
 the cross validation split. In Section \ref{training-inference}, we provide the cross-validated performance
 metrics of each of the models.
 
@@ -518,18 +516,18 @@ commentary on recommended practices in practical applications, especially with r
 In this subsection, we develop the following models:
 
 1. A GLM with gamma distribution and log link function,
-2. A neural network with unidimensional categorical embeddings,
-3. A GLM with the categorical predictors replaced by the trained embeddings from Model 2,
+2. A neural network with one-dimensional categorical embeddings,
+3. A GLM with the categorical predictors replaced by the learned embeddings from Model 2,
 4. A neural network with multidimensional categorical embeddings.
 
 These model architectures are relatively uncomplicated by today's standards, and are so chosen to better highlight the
-embedding components. Later, in Section \ref{attn}, we will investigate more involved architectures utilizing embeddings
+embedding components. Later, in Section \ref{attention_models}, we will investigate more involved architectures utilizing embeddings
 that represent the state of the art for modeling tabular data.
 
 ### Model 1: GLM 
 
 While this paper focuses on embeddings in neural networks, we begin with a GLM to provide a common frame of 
-reference since most actuaries are familiar with the technique. 
+reference, since most actuaries are familiar with the technique. 
 Although GLMs are commonplace and well-studied in the actuarial literature, there are still plenty of decisions to 
 be made in the modeling process; see, for example, @Goldburd for an in-depth discussion. For our purpose of 
 establishing a baseline, we proceed with what we perceive as reasonable decisions around feature engineering and model structure, outlined below:
@@ -563,9 +561,9 @@ each categorical variable.
 
 In Table \@ref(tab:relativities), we exhibit an exerpt of the relativities, or exponentiated fitted coefficients, 
 of a couple categorical variables. Recall that the choice of the log link gives a multiplicative structure, so the
-interpretation of 1.37 for `occupancy_type = "Non-residential building"` is that, all else equal, the expected 
+interpretation of 1.34 for `occupancy_type = "Non-residential building"` is that, all else equal, the expected 
 loss for
-a policy for a non-residential building is 1.37 times that of a policy for a single family home, which is the base,
+a policy for a non-residential building is 1.34 times that of a policy for a single family home, which is the base,
 or reference, level for the factor.
 
 Table: (\#tab:relativities) Excerpt of relativities for Model 1.
@@ -592,8 +590,8 @@ have been normalized in data pre-processing, before being passed through a feedf
 and ReLU activation)
  to obtain a scalar
 value between 0 and 1, as constrained by a sigmoid output activation. This scalar output represents the proportion of
-coverage amount that is paid out, so we multiply it by the unnormalized dollar amount of the coverage amount to obtain
-our prediction of the claims paid, which we evaluate using the mean squared error (MSE) loss function.
+coverage amount that is paid out, which we then multiply by the dollar amount of the coverage amount to obtain
+our prediction of the claims paid. For optimization, we use the mean squared error (MSE) loss function.
 
 ```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/nn.png")
@@ -603,14 +601,14 @@ With a single hidden layer, this architecture is relatively simple; without the 
 corresponding ReLU activation, we would actually recover a logistic regression structure. 
 The choice of one for the embedding dimension is also due to simplicity: it is easily interpretable as the 
 representation
-of each factor level as a point on the real number line, also, the trained embeddings are easily incorporated into a GLM
+of each factor level as a point on the real number line; also, the trained embeddings are easily incorporated into a GLM
 which we will see in Model 3. In practice, the embedding dimension is a hyperparameter one can tune, for example via
 cross validation, and can vary for each variable. However, we also note that the choice of one for the 
 embedding output dimension is not an unreasonable one, especially when the cardinalities of the categorical variables
-are not unusually large.
+are not large (i.e., when they are in the 10s).
 
 In Tables \@ref(tab:embeddings-occupancy-type) and \@ref(tab:embeddings-flood-zone), we show the learned embeddings
-for the `occupancy_type` and an excerpt of them for `flood_zone`. While it may be tempting to compare these values
+for `occupancy_type` and an excerpt of them for `flood_zone`. While it may be tempting to compare these values
 to those in Table \@ref(tab:relativities), they represent fundamentally different concepts. It is helpful to think
 of the embedding values for each variable as a continuous represention of the variable itself, rather than a 
 "coefficient" associated with the variable. Note that it is not straightforward to inspect the embeddings from a
@@ -619,7 +617,7 @@ within the model. Also note that we now have a way to incorporate the full granu
 which is why more levels are shown in Table \@ref(tab:embeddings-flood-zone) as compared to Table 
 \@ref(tab:relativities). In Section \ref{interpretation}, we will discuss techniques to visualize these embeddings.
 
-Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type`.
+Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type` in Model 2.
 
 |level                                       | embedding|
 |:-------------------------------------------|---------:|
@@ -628,7 +626,7 @@ Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type`
 |Residential building with more than 4 units |      0.12|
 |Single family residence                     |      0.36|
 
-Table: (\#tab:embeddings-flood-zone) Excerpt of learned embeddings for `flood_zone`.
+Table: (\#tab:embeddings-flood-zone) Excerpt of learned embeddings for `flood_zone` in Model 2.
 
 |level | embedding|level | embedding|level | embedding|level | embedding|level | embedding|
 |:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|
@@ -665,16 +663,17 @@ Hence, the model can be written as
 
 where $z_{i,j}$ represents the embedding value for $i$th instance of the categorical column $X_j$. 
 
-Although in this particular example we incorporate one-dimensional embeddings, one can easily include multidimensional
-embeddings, which would increase the model's flexibility. The modeler would need to balance the additional lift with
-some loss of interpretability, since with one-dimensional embeddings, our GLM structure dictates that there is a 
+Although, in this particular example, we incorporate one-dimensional embeddings, one can easily include multidimensional
+embeddings, which would increase the model's flexibility. The modeler would need to balance the potential 
+additional lift with overfitting and
+some loss of interpretability, since, with one-dimensional embeddings, our GLM structure dictates that there is a 
 monotonic relationship between the predicted response and the input embedding, which could be desirable in certain
 use cases (and undesirable in others.)
 
 Since we only have a few parameters in this model, we exhibit the full list of fitted coefficients in Table 
 \@ref(tab:glm2).
 
-Table: (\#tab:glm2) Coefficients of Model 3.
+Table: (\#tab:glm2) Fitted coefficients of Model 3.
 
 |term                                     | estimate|
 |:----------------------------------------|--------:|
@@ -694,8 +693,8 @@ Model 4 is architecturally identical to Model 2, with the only difference being 
 instead of mapping factor levels to real numbers, we map them to points in Euclidean space, where the dimension of the 
 space is the ceiling
 of the factor's cardinality divided by two. Formally, in the notation of Section \ref{catdata},
-$q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$. Following the practice from the previous three
-models, we list the fitted embeddings for a couple variables in Tables \@ref(tab:nn2-occupancy-type) and 
+$q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$. Following the discussion thus far, we list the
+ learned embeddings for a couple variables in Tables \@ref(tab:nn2-occupancy-type) and 
 \@ref(tab:nn2-flood-zone). Note that, for `flood_zone`, we are
 only displaying the embedding for *one* level.
 
@@ -721,7 +720,7 @@ Table: (\#tab:nn2-flood-zone) Learned embeddings for level `"A00"` of variable `
 |e7        |-0.259 |e17       |-1.356 |e27       |-1.022 |          |       |
 |e8        |0.324  |e18       |-0.061 |e28       |1.011  |          |       |
 |e9        |-1.430 |e19       |-0.120 |e29       |-0.843 |          |       |
-|e10       |-1.598 |e20       |-0.488 |e30       |-0.743 |          |       ||
+|e10       |-1.598 |e20       |-0.488 |e30       |-0.743 |          |       |
 
 ## Visualization Techniques for Interpretation {#interpretation}
 
@@ -734,19 +733,21 @@ commonly utilized model-agnostic explanation techniques, such as permutation var
 dependence plots, that can be applied to the neural networks we consider in this paper.
 
 In this section, we focus on ways to visualize the learned embeddings. In the authors' experiences, oftentimes
-the formats of the visualizations --- basic line and scatter plots --- even more so than the content of the data, is 
+the formats of the visualizations---basic line and scatter plots---even more so than the content of the data, are 
 helpful in explaining the concept to stakeholders.
 
 For Model 2, the neural network with one-dimensional embeddings, the task is simple: we can simply plot the levels
-on a line, as in Figure \@ref(fig:occ-type). In the case of `flood_zone`, since we happen to have the luxury of knowing a
-priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the model 
+on a line, as in Figure \@ref(fig:occ-type). In the case of `flood_zone`, where we happen to have the luxury of knowing
+ a
+priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the
+ model 
 mapped them.
 
-```{r occ-type, echo=FALSE, fig.cap="Occupancy type", out.width = "80%", fig.align="center"}
+```{r occ-type, echo=FALSE, fig.cap="Learned embeddings of occupancy type visualized on a number line.", out.width = "80%", fig.align="center"}
 knitr::include_graphics("images/occupancy_type.png")
 ```
 
-```{r flood-zone, echo = FALSE, fig.cap="Flood zone embeddings", out.width = "60%", fig.align = "center"}
+```{r flood-zone, echo = FALSE, fig.cap="Learned embeddings of flood zone by prefix.", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone.png")
 ```
 
@@ -758,7 +759,7 @@ neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate.
 
 ### Principal Component Analysis
 
-In both approaches, the overarching theme is as follows: We have a collection of points in higher dimensional space,
+In both approaches, the overarching theme is as follows: we have a collection of points in higher dimensional space,
 $\mathcal{X} = \{x_1, x_2, \dots, x_n\}$ that we wish to map to some lower dimensional space, typically $\mathbb{R}^2$,
 obtaining $\mathcal{Y} = \{y_1, y_2, \dots, y_n\}$. PCA performs a linear change of coordinates on 
 the input data so that the variance of the data is maximized along each orthogonal coordinate, also known as
@@ -777,7 +778,7 @@ clusters in the plot. From inspecting the matrix decomposition results, we see t
 variance for the first two principal components are just 0.18, which may suggest that perhaps PCA is not the most
 appropriate dimensionality reduction technique in this case.
 
-```{r flood-zone-pca, echo = FALSE, fig.cap="Flood zone PCA", out.width = "50%", fig.align = "center"}
+```{r flood-zone-pca, echo = FALSE, fig.cap="First two principal components of learned embeddings of flood zone in Model 4.", out.width = "50%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_pca.png")
 ```
 
@@ -789,13 +790,13 @@ in the lower dimensional space which have similarity metric values (for a differ
 points in the original data.
 
 Let $p_{j|i}$ denote the probability that point $x_i$ picks point $x_j$ as its *neighbor*, if it picks neighbors in
-proportion to their density under an $n$-dimension Gaussian centered at $x_i$. Formally, we can write $p_{j|i}$ as
+proportion to its density under an $n$-dimension Gaussian centered at $x_i$. Formally, we can write $p_{j|i}$ as
 
 \begin{equation}
-p_{j|i} = \frac{\exp(\norm{x_i - x_j}^2 / 2\sigma_i^2)}{\sum_{k\neq i} \exp(-\norm{x_i - x_k}^2 / 2\sigma_i^2)}. (\#eq:pji)
+p_{j|i} = \frac{\exp(\norm{x_i - x_j}^2 / 2\sigma_i^2)}{\sum_{k\neq i} \exp(-\norm{x_i - x_k}^2 / 2\sigma_i^2)}, (\#eq:pji)
 \end{equation}
-
-The similarity metric for the originals space symmetrizes this conditional probability and is defined as
+where $\sigma_i^2$ denotes the variance of the Gaussian associated with $x_i$. The similarity metric for the original
+ space symmetrizes this conditional probability and is defined as
 
 \begin{equation}
 p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}.
@@ -841,12 +842,12 @@ be very sensitive to the perplexity hyperparameter. In addition, for our use cas
 learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our
 reaosnable range of hyperparameter values need to be adjusted down.
 In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in
-Model 3 with various perplexity settings: 0.1, 0.5, 1.0, and 10; the learning rate and the number of steps are fixed at
+Model 3 with various perplexity settings: 2, 3, 5, and 10; the learning rate and the number of steps are fixed at
 100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In
 particular, flood zone D appears in its own cluster, which implies it is far away from other levels in the embedding
-space. When the perplexity is set to 10 (and beyond), however, we lose the geometric properties.
+space. When the perplexity is set to 10 (and beyond), however, we start to lose the geometric properties.
 
-```{r flood-zone-tsne, echo = FALSE, fig.cap="Flood zone t-SNE", out.width = "60%", fig.align = "center"}
+```{r flood-zone-tsne, echo = FALSE, fig.cap="t-SNE plots of learned embeddings of flood zone in Model 4, with various perplexity values. From left to right then top to bottom: 2, 3, 5, and 10.", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_tsne.png")
 ```
 
@@ -880,7 +881,7 @@ check reasonablness of other models' results. Since it is possible for a linear
 regression to output negative values, we cap the predictions below by 0.01 during scoring. Somewhat surprisingly, in 
 the problem we
 are considering, it performs similary to the more complex neural network models in the RMSE metric (which it optimizes
-for, as the unit deviance of the normal distribution corresponds with MSE.) Of course, this is not to discredit neural
+for, as the unit deviance of the normal distribution correspond to MSE.) Of course, this is not to discredit neural
 networks or GLMs, as the experiments are performed without extensive hyperparameter tuning or feature engineering.
 
 Table: (\#tab:cv-results) Cross validation results.
