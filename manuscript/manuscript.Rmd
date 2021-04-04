@@ -617,7 +617,7 @@ within the model. Also note that we now have a way to incorporate the full granu
 which is why more levels are shown in Table \@ref(tab:embeddings-flood-zone) as compared to Table 
 \@ref(tab:relativities). In Section \ref{interpretation}, we will discuss techniques to visualize these embeddings.
 
-Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type`.
+Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type` in Model 2.
 
 |level                                       | embedding|
 |:-------------------------------------------|---------:|
@@ -626,7 +626,7 @@ Table: (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type`
 |Residential building with more than 4 units |      0.12|
 |Single family residence                     |      0.36|
 
-Table: (\#tab:embeddings-flood-zone) Excerpt of learned embeddings for `flood_zone`.
+Table: (\#tab:embeddings-flood-zone) Excerpt of learned embeddings for `flood_zone` in Model 2.
 
 |level | embedding|level | embedding|level | embedding|level | embedding|level | embedding|
 |:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|
@@ -663,16 +663,17 @@ Hence, the model can be written as
 
 where $z_{i,j}$ represents the embedding value for $i$th instance of the categorical column $X_j$. 
 
-Although in this particular example we incorporate one-dimensional embeddings, one can easily include multidimensional
-embeddings, which would increase the model's flexibility. The modeler would need to balance the additional lift with
-some loss of interpretability, since with one-dimensional embeddings, our GLM structure dictates that there is a 
+Although, in this particular example, we incorporate one-dimensional embeddings, one can easily include multidimensional
+embeddings, which would increase the model's flexibility. The modeler would need to balance the potential 
+additional lift with overfitting and
+some loss of interpretability, since, with one-dimensional embeddings, our GLM structure dictates that there is a 
 monotonic relationship between the predicted response and the input embedding, which could be desirable in certain
 use cases (and undesirable in others.)
 
 Since we only have a few parameters in this model, we exhibit the full list of fitted coefficients in Table 
 \@ref(tab:glm2).
 
-Table: (\#tab:glm2) Coefficients of Model 3.
+Table: (\#tab:glm2) Fitted coefficients of Model 3.
 
 |term                                     | estimate|
 |:----------------------------------------|--------:|
@@ -692,8 +693,8 @@ Model 4 is architecturally identical to Model 2, with the only difference being 
 instead of mapping factor levels to real numbers, we map them to points in Euclidean space, where the dimension of the 
 space is the ceiling
 of the factor's cardinality divided by two. Formally, in the notation of Section \ref{catdata},
-$q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$. Following the practice from the previous three
-models, we list the fitted embeddings for a couple variables in Tables \@ref(tab:nn2-occupancy-type) and 
+$q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$. Following the discussion thus far, we list the
+ learned embeddings for a couple variables in Tables \@ref(tab:nn2-occupancy-type) and 
 \@ref(tab:nn2-flood-zone). Note that, for `flood_zone`, we are
 only displaying the embedding for *one* level.
 
