@@ -720,7 +720,7 @@ Table: (\#tab:nn2-flood-zone) Learned embeddings for level `"A00"` of variable `
 |e7        |-0.259 |e17       |-1.356 |e27       |-1.022 |          |       |
 |e8        |0.324  |e18       |-0.061 |e28       |1.011  |          |       |
 |e9        |-1.430 |e19       |-0.120 |e29       |-0.843 |          |       |
-|e10       |-1.598 |e20       |-0.488 |e30       |-0.743 |          |       ||
+|e10       |-1.598 |e20       |-0.488 |e30       |-0.743 |          |       |
 
 ## Visualization Techniques for Interpretation {#interpretation}
 
@@ -733,19 +733,21 @@ commonly utilized model-agnostic explanation techniques, such as permutation var
 dependence plots, that can be applied to the neural networks we consider in this paper.
 
 In this section, we focus on ways to visualize the learned embeddings. In the authors' experiences, oftentimes
-the formats of the visualizations --- basic line and scatter plots --- even more so than the content of the data, is 
+the formats of the visualizations---basic line and scatter plots---even more so than the content of the data, are 
 helpful in explaining the concept to stakeholders.
 
 For Model 2, the neural network with one-dimensional embeddings, the task is simple: we can simply plot the levels
-on a line, as in Figure \@ref(fig:occ-type). In the case of `flood_zone`, since we happen to have the luxury of knowing a
-priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the model 
+on a line, as in Figure \@ref(fig:occ-type). In the case of `flood_zone`, where we happen to have the luxury of knowing
+ a
+priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the
+ model 
 mapped them.
 
-```{r occ-type, echo=FALSE, fig.cap="Occupancy type", out.width = "80%", fig.align="center"}
+```{r occ-type, echo=FALSE, fig.cap="Learned embeddings of occupancy type visualized on a number line.", out.width = "80%", fig.align="center"}
 knitr::include_graphics("images/occupancy_type.png")
 ```
 
-```{r flood-zone, echo = FALSE, fig.cap="Flood zone embeddings", out.width = "60%", fig.align = "center"}
+```{r flood-zone, echo = FALSE, fig.cap="Learned embeddings of flood zone by prefix.", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone.png")
 ```
 
