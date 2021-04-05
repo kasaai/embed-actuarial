@@ -594,7 +594,7 @@ coverage amount that is paid out, which we then multiply by the dollar amount of
 our prediction of the claims paid. For optimization, we use the mean squared error (MSE) loss function.
 
 ```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "80%", fig.align = "center"}
-knitr::include_graphics("images/nn.png")
+knitr::include_graphics("images/nn.pdf")
 ```
 
 With a single hidden layer, this architecture is relatively simple; without the hidden layer and
@@ -877,10 +877,10 @@ embeddings in place of categorical levels improves the GLM, at least from the RM
 
 While linear regression (i.e., the specific case of GLM with a gaussian distribution and identity link function) is not
 commonly used for severity modeling, we throw it into the mix as a benchmark, a practice we recommend in order to
-check reasonablness of other models' results. Since it is possible for a linear
+check reasonableness of other models' results. Since it is possible for a linear
 regression to output negative values, we cap the predictions below by 0.01 during scoring. Somewhat surprisingly, in 
 the problem we
-are considering, it performs similary to the more complex neural network models in the RMSE metric (which it optimizes
+are considering, it performs similar to the more complex neural network models in the RMSE metric (which it optimizes
 for, as the unit deviance of the normal distribution correspond to MSE.) Of course, this is not to discredit neural
 networks or GLMs, as the experiments are performed without extensive hyperparameter tuning or feature engineering.
 
@@ -902,6 +902,40 @@ should this best be done? CatBoost - cut into 256 groups smoothness Map numeric 
 embedding - basis expansion Add a distribution to the embeddings Can insights from credibility theory lead to enhanced embeddings? Take credibility mixture over embeddings Cluster embeddings PCA of embeddings
 -->
 # Attention based modelling {#attention_models}
+In this section we investigate whether the predictive performance of the models applied to the NFIP dataset can be improved
+by applying the attention based models defined in Section \ref{attention}. We discuss the implementation of each of the 
+Simple Attention, TabTransformer and TabNet models in the following sub-section, then discuss how the modifications made
+to the embeddings through the application of attention can be visualized in the following sub-section. We conclude the 
+section with a discussion of the model results.  
+
+## Models
+
+In this subsection, we develop the following models:
+
+5. A neural network based on the design of Model 4, with an attention component
+6. Similar to Model 5, a neural network implementing the TabTransformer architecture
+7. A neural network implementing the TabNet architecture 
+
+Compared to the models presented in the previous section, the models presented here are closer to state of the art models that
+might be used for tabular data modelling problems. To the best of our knowledge, this is the first analysis of these architectures
+within the actuarial literature. 
+
+### Model 5: Simple Attention Network
+Model 5 is conceptually similar to Model 4, except for the following two aspects. First, we standardize the dimension of the embedding 
+layers to 8 dimensions for each categorical covariate. This is done to allow for the application of the attention component, which 
+requires the embeddings for each covariate to have the same dimension. Second, we apply a self-attention mechanism within the network, 
+as shown in Equation \ref{eq:embed_to_attn_to_nn}. We illustrate this architecture in Figure \@ref(fig:nn-2).
+
+
+```{r nn-2, echo = FALSE, fig.cap = "Architecture of Model 5.", out.width = "80%", fig.align = "center"}
+knitr::include_graphics("images/sna2.pdf")
+```
+
+### Model 6: Neural Network with Unidimensional Embeddings
+
+### Model 7: Neural Network with Unidimensional Embeddings
+
+
 
 Can we get some lift by adding attention layers? TabNet model Transformer model
 

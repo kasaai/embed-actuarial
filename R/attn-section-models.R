@@ -57,7 +57,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
   # tabtransformer
   model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
-                               embedding_dim = 8, num_heads = 3, fc_units = 8
+                               embedding_dim = 8, num_heads = 3, fc_units = 16
   )
 
   optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
@@ -74,7 +74,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
   # simple attention
 
   model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
-                                       units = 8)
+                                       units = 16)
 
   optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, amsgrad = TRUE)
 
@@ -102,7 +102,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     prep(strings_as_factors = TRUE)
 
   model_tabnet <- tabnet_fit(form,
-                             data = juice(rec_tabnet), epochs = epochs,
+                             data = juice(rec_tabnet), epochs = 15,
                              verbose = TRUE,
                              valid_split = 0.2
   )
