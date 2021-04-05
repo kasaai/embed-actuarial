@@ -103,9 +103,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
   model_tabnet <- tabnet_fit(form,
                              data = juice(rec_tabnet), epochs = epochs,
-                             num_independent = 1, num_shared = 1, num_steps = 3,
-                             decision_width = 1, attention_width = 1,
-                             learn_rate = learning_rate, verbose = TRUE, batch_size = batch_size,
+                             verbose = TRUE,
                              valid_split = 0.2
   )
 
@@ -129,38 +127,38 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 }
 
 cv_results <- cvfolds$splits %>%
-  lapply(function(x) model_analyze_assess(x, 0.01, 15, 1000))
+  lapply(function(x) model_analyze_assess(x, 0.001, 30, 1000))
 
-cv_results %>%
+model_names_mapping = data.frame(mod = c("tabnet", "tabt", "simpleattn"), Model = c("TabNet", "TabTransformer", "Simple Attention"))
+
+require(data.table)
+res = cv_results %>%
   map(function(x) {
     list(
-      rmse_nn = rmse(x$actuals, pmax(x$preds_nn, 0.01)),
-      rmse_nn2 = rmse(x$actuals, pmax(x$preds_nn2, 0.01)),
-      rmse_glm = rmse(x$actuals, x$preds_glm),
-      rmse_glm2 = rmse(x$actuals, x$preds_glm2),
-      rmse_glm_gaussian = rmse(x$actuals, pmax(x$preds_glm_gaussian, 0.01)),
-      rmse_zeros = rmse(x$actuals, 0),
-      mae_nn = mae(x$actuals, x$preds_nn),
-      mae_nn2 = mae(x$actuals, x$preds_nn2),
-      mae_glm = mae(x$actuals, x$preds_glm),
-      mae_glm2 = mae(x$actuals, x$preds_glm2),
-      mae_glm_gaussian = mae(x$actuals, pmax(x$preds_glm_gaussian, 0.01))
+      rmse_tabnet = rmse(x$actuals, pmax(x$preds_tabnet, 0.01)),
+      rmse_tabt = rmse(x$actuals, pmax(x$preds_tabt, 0.01)),
+      rmse_simpleattn = rmse(x$actuals, x$preds_simple_attn),
+      mae_tabnet = mae(x$actuals, x$preds_tabnet),
+      mae_tabt = mae(x$actuals, x$preds_tabt),
+      mae_simpleattn = mae(x$actuals, x$preds_simple_attn)
     )
-  }) %>%
-  transpose() %>%
-  as_tibble() %>%
-  pivot_longer(everything()) %>%
-  separate(name, into = c("metric", "mod"), sep = "_", extra = "merge") %>%
-  pivot_wider(names_from = "metric") %>%
+  }) %>% rbindlist()
+res[, id:= 1:5]
+res = res %>% melt.data.table(id.vars = c("id"))
+res = res %>% separate(variable, into = c("metric", "mod"), sep = "_", extra = "merge") %>%
+pivot_wider(names_from = "metric") %>%
   left_join(model_names_mapping, by = "mod") %>%
-  select(-mod) %>%
-  arrange(id) %>%
-  select(Model, rmse, mae) %>%
-  rename(RMSE = rmse, MAE = mae) %>%
+  select(-mod) %>% data.table()
+res[, .(RMSE = mean(rmse), MAE = mean(mae)), keyby = .(Model)] %>%
   knitr::kable(digits = 0, format.args = list(
     big.mark = ",",
     scientific = FALSE
   ), format = "pipe")
+
+
+
+
+_____________________________________________________
 
 dir.create("model_files")
 saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
