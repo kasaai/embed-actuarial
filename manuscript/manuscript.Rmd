@@ -446,7 +446,7 @@ Finally, a different way of incorporating attention into the modeling of tabular
 In summary, the main idea of the TabNet model is to try emulate the excellent performance of decision trees on tabular data modelling using deep neural networks. 
 This is done by structuring the neural networks to emulate a key aspect of decision tree modelling, which is the efficient selection of relevant covariates
 for the model task. Within TabNet, an attention based model is used to select features by estimating attention scores for each covariate within $X$. 
-The covariates are multiplied by the attention scores to down-weight less relevant features for the prediction problem. Other less important details of the Tabnwet
+The covariates are multiplied by the attention scores to down-weight less relevant features for the prediction problem. Other less important details of the TabNet
 model are given in @Ark2019.
 
 # Predictive Modeling with Embeddings {#modelling}
@@ -926,25 +926,28 @@ layers to 8 dimensions for each categorical covariate. This is done to allow for
 requires the embeddings for each covariate to have the same dimension. Second, we apply a self-attention mechanism within the network, 
 as shown in Equation \ref{eq:embed_to_attn_to_nn}. We illustrate this architecture in Figure \@ref(fig:nn-2).
 
-
 ```{r nn-2, echo = FALSE, fig.cap = "Architecture of Model 5.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/sna2.pdf")
 ```
 
-### Model 6: Neural Network with Unidimensional Embeddings
+### Model 6: TabTransformer
+Whereas Model 5 makes a simple modification to the structure of Model 4, the TabTransformer model is slightly more complex. With respect to
+similarities between Model 5 and 6, both use embeddings with a standard 8 dimensions for each categorical covariate. In terms of differences,
+Model 6 uses a Transformer layer in place of self-attention and a positional encoding of a single dimension, i.e. $d_col = 1$. The TabTransformer
+architecture is shown in Figure Figure \@ref(fig:nn-3).
 
-### Model 7: Neural Network with Unidimensional Embeddings
 
-
-
-Can we get some lift by adding attention layers? TabNet model Transformer model
-
-Description of tabnet, talk about how it's related to embeddings, show some plots 
-like \@ref(fig:masks) etc.
-
-```{r masks, echo = FALSE, fig.cap = "blahblah", out.width = "100%", fig.align = "center"}
-knitr::include_graphics("images/masks.png")
+```{r nn-3, echo = FALSE, fig.cap = "Architecture of Model 6.", out.width = "80%", fig.align = "center"}
+knitr::include_graphics("images/tabt.pdf")
 ```
+
+### Model 7: TabNet
+The final model we consider in this subsection is the TabNet architecture. The structure of the model is quite similar to Model 6, except 
+that a more specialized form of self-attention is used to select the most important covariates for the modelling problem. 
+
+## Explaining Attention Based models
+
+## Results
 
 # Conclusions {#Conclusions}
 
