@@ -59,7 +59,7 @@ valid_dl <- valid_ds %>% dataloader(batch_size = batch_size, shuffle = TRUE)
 test_dl <- test_ds %>% dataloader(batch_size = batch_size, shuffle = FALSE)
 ####################
 
-xcat = train_ds[1]$x[[1]]$to(device = "cpu")
+xcat = train_ds[20]$x[[1]]$to(device = "cpu")
 xcat = torch_reshape(xcat, c(1,5))
 
 #### simple attn
@@ -82,6 +82,7 @@ xcat_out <- model$col_embedder(xcat)
 shapes <- xcat_out$shape
 embedded_reshape <- xcat_out$view(list(shapes[2], shapes[1], shapes[3]))
 
+attn = model$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[2]]
 embedded_reshape <- model$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[1]] + embedded_reshape
 embedded_reshape <- model$lnorm1(embedded_reshape)
 xcat_out_a <- embedded_reshape %>%

@@ -101,7 +101,7 @@ simple_net_attn <- nn_module(
     initialize = function(cardinalities,
                           num_numerical,
                           units = 16,
-                          embed_dim = 5,
+                          embed_dim = 10,
                           fn_embedding_dim = function(x) embed_dim) {
         self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
@@ -115,10 +115,10 @@ simple_net_attn <- nn_module(
     forward = function(xcat, xnum, xcoverage) {
         embedded <- self$embedder(xcat)
         shapes <- embedded$shape
-        embedded_reshape <- embedded$view(list(self$embed_dim,embedded$shape[1],  self$embed_dim))
-        embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
-        embedded_attended <- embedded_attended[[1]]
-        embedded_attended <- embedded_attended$view(list(embedded$shape[1], self$embed_dim * self$embed_dim))
+        embedded_reshape <- embedded$view(list(model$embed_dim, embedded$shape[1], model$embed_dim))
+        embedded_attention <- model$attn(embedded_reshape, embedded_reshape, embedded_reshape)
+        embedded_attended <- embedded_attention[[1]]
+        embedded_attended <- embedded_attended$view(list(embedded$shape[1], model$embed_dim * model$embed_dim))
         all <- torch_cat(list(embedded_attended, xnum$to(dtype = torch_float())), dim = 2)
         ratio <- all %>%
             self$fc() %>%
@@ -300,7 +300,7 @@ mlp <- nn_module(
 
 tabtransformer <- nn_module(
     "tabtransformer",
-    initialize = function(cardinalities, num_numerical, embedding_dim = 2, num_heads = 3, fc_units = 32) {
+    initialize = function(cardinalities, num_numerical, embedding_dim = 10, num_heads = 3, fc_units = 32) {
         self$col_embedder <- embedding_with_position(cardinalities, embedding_dim)
         self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads, dropout = 0.02)
         self$lnorm1 <- nn_layer_norm(embedding_dim + 1)
@@ -313,16 +313,21 @@ tabtransformer <- nn_module(
         self
     },
     forward = function(xcat, xnum, xcoverage) {
-        xcat_out <- self$col_embedder(xcat)
-        xcat_out <- self$attn(xcat_out, xcat_out, xcat_out)[[1]] + xcat_out
-        xcat_out <- self$lnorm1(xcat_out)
-        xcat_out_a <- xcat_out %>%
-            self$linear1() %>%
+        xcat_out <- model$col_embedder(xcat)
+        shapes <- xcat_out$shape
+        embedded_reshape <- xcat_out$view(list(shapes[2], shapes[1], shapes[3]))
+
+        attn = model$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[2]]
+        embedded_reshape <- model$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[1]] + embedded_reshape
+        embedded_reshape <- model$lnorm1(embedded_reshape)
+        xcat_out_a <- embedded_reshape %>%
+            model$linear1() %>%
             nnf_relu() %>%
-            self$linear2()
-        xcat_out <- self$lnorm2(xcat_out + xcat_out_a)
-        xcat_out <- xcat_out$view(c(-1, xcat_out$size(2) * xcat_out$size(3)))
-        concat <- torch_cat(list(xcat_out, xnum), dim = 2)
+            model$linear2()
+        embedded_reshape <- model$lnorm2(embedded_reshape + xcat_out_a)
+        embedded_reshape <- embedded_reshape$view(list(shapes[1], shapes[2]*shapes[3]))
+
+        concat <- torch_cat(list(embedded_reshape, xnum), dim = 2)
         ratio <- self$mlp1(concat) %>%
             nnf_sigmoid()
         ratio * xcoverage
