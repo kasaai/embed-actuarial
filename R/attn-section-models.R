@@ -57,7 +57,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
   # tabtransformer
   model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
-                               embedding_dim = 10, num_heads = 11, fc_units = 16
+                               embedding_dim = 5, num_heads = 3, fc_units = 16
   )
 
   optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
@@ -73,7 +73,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
   # simple attention
 
-  model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),embed_dim = 10,
+  model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),embed_dim = 5,
                                        units = 16)
 
   optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, amsgrad = TRUE)

@@ -101,13 +101,14 @@ simple_net_attn <- nn_module(
     initialize = function(cardinalities,
                           num_numerical,
                           units = 16,
-                          embed_dim = 10,
+                          embed_dim = 5,
                           fn_embedding_dim = function(x) embed_dim) {
         self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
         self$embed_dim <- fn_embedding_dim()
-        self$attn <- nn_multihead_attention(embed_dim = 10, num_heads = 1, dropout = 0.02)
+        self$drop = nn_dropout(p=0.01)
+        self$attn <- nn_multihead_attention(embed_dim = 5, num_heads = 1, dropout = 0.01)
         self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
         self$output <- nn_linear(units, 1)
         self
@@ -115,11 +116,11 @@ simple_net_attn <- nn_module(
     forward = function(xcat, xnum, xcoverage) {
         embedded <- self$embedder(xcat)
         shapes <- embedded$shape
-        print(shapes)
-        embedded_reshape <- embedded$view(list(5, shapes[1], 10))
+        embedded_reshape <- embedded$view(list(5, shapes[1], 5))
         embedded_attention <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
         embedded_attended <- embedded_attention[[1]]
-        embedded_attended <- embedded_attended$view(list(shapes[1], 50))
+        embedded_attended <- embedded_attended$view(list(shapes[1], 25))
+        embedded_attended <- self$drop(embedded_attended)
         all <- torch_cat(list(embedded_attended, xnum$to(dtype = torch_float())), dim = 2)
         ratio <- all %>%
             self$fc() %>%
@@ -308,6 +309,7 @@ tabtransformer <- nn_module(
         self$lnorm2 <- nn_layer_norm(embedding_dim + 1)
         self$linear1 <- nn_linear(embedding_dim + 1, 4 * (embedding_dim + 1))
         self$linear2 <- nn_linear(4 * (embedding_dim + 1), (embedding_dim + 1))
+        self$drop = nn_dropout(p=0.01)
         self$mlp1 <- mlp(length(cardinalities) * (embedding_dim + 1) + num_numerical, fc_units)
         # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
         # self$to(device = device)
@@ -329,6 +331,7 @@ tabtransformer <- nn_module(
         embedded_reshape <- self$lnorm2(embedded_reshape + xcat_out_a)
         #print(shapes)
         embedded_reshape <- embedded_reshape$view(list(shapes[1], shapes[2]*shapes[3]))
+        embedded_reshape <- self$drop(embedded_reshape)
 
         concat <- torch_cat(list(embedded_reshape, xnum), dim = 2)
         ratio <- self$mlp1(concat) %>%
