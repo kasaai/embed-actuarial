@@ -103,6 +103,7 @@ simple_net_attn <- nn_module(
                           units = 16,
                           embed_dim = 5,
                           fn_embedding_dim = function(x) embed_dim) {
+        self$no_embeds = length(cardinalities)
         self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
@@ -115,11 +116,20 @@ simple_net_attn <- nn_module(
     },
     forward = function(xcat, xnum, xcoverage) {
         embedded <- self$embedder(xcat)
-        shapes <- embedded$shape
-        embedded_reshape <- embedded$view(list(5, shapes[1], 5))
+        batch_size <- embedded$shape[1]
+        no_embeds = self$no_embeds
+        embed_dim = self$embed_dim
+
+        embedded_reshape <- torch_unsqueeze(embedded,3) # batch_size * (no_embeds * embed_dim) * 1
+        embedded_reshape <- torch_reshape(embedded_reshape,c(batch_size, no_embeds, embed_dim)) # batch_size * no_embeds * embed_dim
+        embedded_reshape <- torch_transpose(embedded_reshape,2,1) # no_embeds * batch_size * embed_dim
+
         embedded_attention <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
         embedded_attended <- embedded_attention[[1]]
-        embedded_attended <- embedded_attended$view(list(shapes[1], 25))
+
+        embedded_attended <- torch_transpose(embedded_attended, 1, 2)
+        embedded_attended <- torch_reshape(embedded_attended, c(batch_size, no_embeds*embed_dim))
+
         embedded_attended <- self$drop(embedded_attended)
         all <- torch_cat(list(embedded_attended, xnum$to(dtype = torch_float())), dim = 2)
         ratio <- all %>%
@@ -303,6 +313,9 @@ mlp <- nn_module(
 tabtransformer <- nn_module(
     "tabtransformer",
     initialize = function(cardinalities, num_numerical, embedding_dim = 5, num_heads = 3, fc_units = 32) {
+        self$no_embeds = length(cardinalities)
+        self$embed_dim <- embedding_dim
+
         self$col_embedder <- embedding_with_position(cardinalities, embedding_dim)
         self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads, dropout = 0.05)
         self$lnorm1 <- nn_layer_norm(embedding_dim + 1)
@@ -316,24 +329,33 @@ tabtransformer <- nn_module(
         self
     },
     forward = function(xcat, xnum, xcoverage) {
-        xcat_out <- self$col_embedder(xcat)
-        shapes <- xcat_out$shape
-        embedded_reshape <- xcat_out$view(list(shapes[2], shapes[1], shapes[3]))
 
-        #attn = self$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[2]]
-        #print(shapes)
-        embedded_reshape <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[1]] + embedded_reshape
-        embedded_reshape <- self$lnorm1(embedded_reshape)
-        xcat_out_a <- embedded_reshape %>%
+        embedded <- self$col_embedder(xcat)
+
+        batch_size <- embedded$shape[1]
+        no_embeds = self$no_embeds
+        embed_dim = self$embed_dim + 1
+
+        embedded_reshape <- torch_unsqueeze(embedded,3)
+        embedded_reshape <- torch_reshape(embedded_reshape,c(batch_size, no_embeds, embed_dim))
+        embedded_reshape <- torch_transpose(embedded_reshape,2,1)
+
+        embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[1]] + embedded_reshape
+        embedded_attended <- self$lnorm1(embedded_attended)
+
+        xcat_out_a <- embedded_attended %>%
             self$linear1() %>%
             nnf_relu() %>%
             self$linear2()
-        embedded_reshape <- self$lnorm2(embedded_reshape + xcat_out_a)
-        #print(shapes)
-        embedded_reshape <- embedded_reshape$view(list(shapes[1], shapes[2]*shapes[3]))
-        embedded_reshape <- self$drop(embedded_reshape)
 
-        concat <- torch_cat(list(embedded_reshape, xnum), dim = 2)
+        embedded_attended <- self$lnorm2(embedded_attended + xcat_out_a)
+
+        embedded_attended <- torch_transpose(embedded_attended, 1, 2)
+        embedded_attended <- torch_reshape(embedded_attended, c(batch_size, no_embeds*embed_dim))
+
+        embedded_attended <- self$drop(embedded_attended)
+
+        concat <- torch_cat(list(embedded_attended, xnum), dim = 2)
         ratio <- self$mlp1(concat) %>%
             nnf_sigmoid()
         ratio * xcoverage
