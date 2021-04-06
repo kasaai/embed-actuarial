@@ -949,6 +949,17 @@ that a more specialized form of self-attention is used to select the most import
 
 ## Results
 
+|Model            |   RMSE|    MAE|
+|:----------------|------:|------:|
+|Simple Attention | 62,031| 38,501|
+|TabNet           | 62,938| 38,386|
+|TabTransformer   | 61,420| 38,309|
+
+|Model            |   RMSE|    MAE|
+|:----------------|------:|------:|
+|Simple Attention | 63,309| 38,526|
+|TabTransformer   | 61,275| 38,320|
+
 # Conclusions {#Conclusions}
 
 Conclusions

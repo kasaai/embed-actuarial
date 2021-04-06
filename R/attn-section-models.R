@@ -92,22 +92,22 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
     occupancy_type + flood_zone + primary_residence + community_rating_system_discount
 
-  # tabnet
-  rec_tabnet <- recipe(amount_paid_on_building_claim ~ .,
-                       data = analysis_data %>%
-                         select(-loss_proportion, -reported_zip_code)
-  ) %>%
-    step_normalize(all_numeric(), -all_outcomes()) %>%
-    step_novel(all_nominal()) %>%
-    prep(strings_as_factors = TRUE)
-
-  model_tabnet <- tabnet_fit(form,
-                             data = juice(rec_tabnet), epochs = 15,
-                             verbose = TRUE,
-                             valid_split = 0.2
-  )
-
-  preds_tabnet <- predict(model_tabnet, bake(rec_tabnet, assessment_data))$.pred
+  # # tabnet
+  # rec_tabnet <- recipe(amount_paid_on_building_claim ~ .,
+  #                      data = analysis_data %>%
+  #                        select(-loss_proportion, -reported_zip_code)
+  # ) %>%
+  #   step_normalize(all_numeric(), -all_outcomes()) %>%
+  #   step_novel(all_nominal()) %>%
+  #   prep(strings_as_factors = TRUE)
+  #
+  # model_tabnet <- tabnet_fit(form,
+  #                            data = juice(rec_tabnet), epochs = 15,
+  #                            verbose = TRUE,
+  #                            valid_split = 0.2
+  # )
+  #
+  # preds_tabnet <- predict(model_tabnet, bake(rec_tabnet, assessment_data))$.pred
 
 
 
@@ -115,12 +115,12 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     pull(amount_paid_on_building_claim)
 
   list(
-    model_tabnet = model_tabt,
-    model_tabt = model_tabnet,
+    #model_tabnet = model_tabnet,
+    model_tabt = model_tabt,
     model_simple_attn = model_simple_attn,
     rec_nn = rec_nn,
     actuals = actuals,
-    preds_tabnet = preds_tabnet,
+    #preds_tabnet = preds_tabnet,
     preds_simple_attn = preds_simple_attn,
     preds_tabt = preds_tabt
   )
@@ -129,16 +129,18 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 cv_results <- cvfolds$splits %>%
   lapply(function(x) model_analyze_assess(x, 0.001, 30, 1000))
 
-model_names_mapping = data.frame(mod = c("tabnet", "tabt", "simpleattn"), Model = c("TabNet", "TabTransformer", "Simple Attention"))
+model_names_mapping = data.frame(mod = c(#"tabnet",
+                                         "tabt", "simpleattn"), Model = c(#"TabNet",
+                                                                                    "TabTransformer", "Simple Attention"))
 
 require(data.table)
 res = cv_results %>%
   map(function(x) {
     list(
-      rmse_tabnet = rmse(x$actuals, pmax(x$preds_tabnet, 0.01)),
+      # rmse_tabnet = rmse(x$actuals, pmax(x$preds_tabnet, 0.01)),
       rmse_tabt = rmse(x$actuals, pmax(x$preds_tabt, 0.01)),
       rmse_simpleattn = rmse(x$actuals, x$preds_simple_attn),
-      mae_tabnet = mae(x$actuals, x$preds_tabnet),
+      # mae_tabnet = mae(x$actuals, x$preds_tabnet),
       mae_tabt = mae(x$actuals, x$preds_tabt),
       mae_simpleattn = mae(x$actuals, x$preds_simple_attn)
     )
@@ -156,14 +158,12 @@ res[, .(RMSE = mean(rmse), MAE = mean(mae)), keyby = .(Model)] %>%
   ), format = "pipe")
 
 
-
-
-_____________________________________________________
+################
 
 dir.create("model_files")
-saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
-saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
-saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
-torch_save(cv_results[[1]]$model_nn, "model_files/nn1.pt")
-torch_save(cv_results[[1]]$model_nn2, "model_files/nn2.pt")
-torch_save(cv_results[[1]]$model_simple_attn, "model_files/nn_simple_attn.pt")
+#saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
+#saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
+#saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
+torch_save(cv_results[[1]]$model_tabnet, "model_files/tabnet1.pt")
+saveRDS(cv_results[[1]]$model_tabt, "model_files/tabt.pt")
+torch_save(cv_results[[1]]$model_simple_attn, "model_files/model_simple_attn.pt")

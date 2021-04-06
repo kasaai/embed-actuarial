@@ -107,7 +107,7 @@ simple_net_attn <- nn_module(
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
         self$embed_dim <- fn_embedding_dim()
-        self$attn <- nn_multihead_attention(embed_dim = embed_dim, num_heads = 1)
+        self$attn <- nn_multihead_attention(embed_dim = embed_dim, num_heads = 1, dropout = 0.02)
         self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
         self$output <- nn_linear(units, 1)
         self
@@ -115,7 +115,7 @@ simple_net_attn <- nn_module(
     forward = function(xcat, xnum, xcoverage) {
         embedded <- self$embedder(xcat)
         shapes <- embedded$shape
-        embedded_reshape <- embedded$view(list(embedded$shape[1], self$embed_dim, self$embed_dim))
+        embedded_reshape <- embedded$view(list(self$embed_dim,embedded$shape[1],  self$embed_dim))
         embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
         embedded_attended <- embedded_attended[[1]]
         embedded_attended <- embedded_attended$view(list(embedded$shape[1], self$embed_dim * self$embed_dim))
@@ -302,7 +302,7 @@ tabtransformer <- nn_module(
     "tabtransformer",
     initialize = function(cardinalities, num_numerical, embedding_dim = 2, num_heads = 3, fc_units = 32) {
         self$col_embedder <- embedding_with_position(cardinalities, embedding_dim)
-        self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads)
+        self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads, dropout = 0.02)
         self$lnorm1 <- nn_layer_norm(embedding_dim + 1)
         self$lnorm2 <- nn_layer_norm(embedding_dim + 1)
         self$linear1 <- nn_linear(embedding_dim + 1, 4 * (embedding_dim + 1))
