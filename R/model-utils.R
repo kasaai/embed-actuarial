@@ -103,22 +103,34 @@ simple_net_attn <- nn_module(
                           units = 16,
                           embed_dim = 5,
                           fn_embedding_dim = function(x) embed_dim) {
+        self$no_embeds = length(cardinalities)
         self$embedder <- embedding_module(cardinalities, fn_embedding_dim)
         sum_embedding_dim <- sapply(cardinalities, fn_embedding_dim) %>%
             sum()
         self$embed_dim <- fn_embedding_dim()
-        self$attn <- nn_multihead_attention(embed_dim = embed_dim, num_heads = 1)
+        self$drop = nn_dropout(p=0.01)
+        self$attn <- nn_multihead_attention(embed_dim = 5, num_heads = 1, dropout = 0.01)
         self$fc <- nn_linear(sum_embedding_dim + num_numerical, units)
         self$output <- nn_linear(units, 1)
         self
     },
     forward = function(xcat, xnum, xcoverage) {
         embedded <- self$embedder(xcat)
-        shapes <- embedded$shape
-        embedded_reshape <- embedded$view(list(embedded$shape[1], self$embed_dim, self$embed_dim))
-        embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
-        embedded_attended <- embedded_attended[[1]]
-        embedded_attended <- embedded_attended$view(list(embedded$shape[1], self$embed_dim * self$embed_dim))
+        batch_size <- embedded$shape[1]
+        no_embeds = self$no_embeds
+        embed_dim = self$embed_dim
+
+        embedded_reshape <- torch_unsqueeze(embedded,3) # batch_size * (no_embeds * embed_dim) * 1
+        embedded_reshape <- torch_reshape(embedded_reshape,c(batch_size, no_embeds, embed_dim)) # batch_size * no_embeds * embed_dim
+        embedded_reshape <- torch_transpose(embedded_reshape,2,1) # no_embeds * batch_size * embed_dim
+
+        embedded_attention <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)
+        embedded_attended <- embedded_attention[[1]]
+
+        embedded_attended <- torch_transpose(embedded_attended, 1, 2)
+        embedded_attended <- torch_reshape(embedded_attended, c(batch_size, no_embeds*embed_dim))
+
+        embedded_attended <- self$drop(embedded_attended)
         all <- torch_cat(list(embedded_attended, xnum$to(dtype = torch_float())), dim = 2)
         ratio <- all %>%
             self$fc() %>%
@@ -300,29 +312,50 @@ mlp <- nn_module(
 
 tabtransformer <- nn_module(
     "tabtransformer",
-    initialize = function(cardinalities, num_numerical, embedding_dim = 2, num_heads = 3, fc_units = 32) {
+    initialize = function(cardinalities, num_numerical, embedding_dim = 5, num_heads = 3, fc_units = 32) {
+        self$no_embeds = length(cardinalities)
+        self$embed_dim <- embedding_dim
+
         self$col_embedder <- embedding_with_position(cardinalities, embedding_dim)
-        self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads)
+        self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads, dropout = 0.05)
         self$lnorm1 <- nn_layer_norm(embedding_dim + 1)
         self$lnorm2 <- nn_layer_norm(embedding_dim + 1)
         self$linear1 <- nn_linear(embedding_dim + 1, 4 * (embedding_dim + 1))
         self$linear2 <- nn_linear(4 * (embedding_dim + 1), (embedding_dim + 1))
+        self$drop = nn_dropout(p=0.01)
         self$mlp1 <- mlp(length(cardinalities) * (embedding_dim + 1) + num_numerical, fc_units)
         # device <- if (cuda_is_available()) torch_device("cuda:0") else "cpu"
         # self$to(device = device)
         self
     },
     forward = function(xcat, xnum, xcoverage) {
-        xcat_out <- self$col_embedder(xcat)
-        xcat_out <- self$attn(xcat_out, xcat_out, xcat_out)[[1]] + xcat_out
-        xcat_out <- self$lnorm1(xcat_out)
-        xcat_out_a <- xcat_out %>%
+
+        embedded <- self$col_embedder(xcat)
+
+        batch_size <- embedded$shape[1]
+        no_embeds = self$no_embeds
+        embed_dim = self$embed_dim + 1
+
+        embedded_reshape <- torch_unsqueeze(embedded,3)
+        embedded_reshape <- torch_reshape(embedded_reshape,c(batch_size, no_embeds, embed_dim))
+        embedded_reshape <- torch_transpose(embedded_reshape,2,1)
+
+        embedded_attended <- self$attn(embedded_reshape, embedded_reshape, embedded_reshape)[[1]] + embedded_reshape
+        embedded_attended <- self$lnorm1(embedded_attended)
+
+        xcat_out_a <- embedded_attended %>%
             self$linear1() %>%
             nnf_relu() %>%
             self$linear2()
-        xcat_out <- self$lnorm2(xcat_out + xcat_out_a)
-        xcat_out <- xcat_out$view(c(-1, xcat_out$size(2) * xcat_out$size(3)))
-        concat <- torch_cat(list(xcat_out, xnum), dim = 2)
+
+        embedded_attended <- self$lnorm2(embedded_attended + xcat_out_a)
+
+        embedded_attended <- torch_transpose(embedded_attended, 1, 2)
+        embedded_attended <- torch_reshape(embedded_attended, c(batch_size, no_embeds*embed_dim))
+
+        embedded_attended <- self$drop(embedded_attended)
+
+        concat <- torch_cat(list(embedded_attended, xnum), dim = 2)
         ratio <- self$mlp1(concat) %>%
             nnf_sigmoid()
         ratio * xcoverage

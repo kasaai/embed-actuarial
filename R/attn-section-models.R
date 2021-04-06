@@ -57,7 +57,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
   # tabtransformer
   model_tabt <- tabtransformer(env$cardinalities, length(numeric_cols),
-                               embedding_dim = 8, num_heads = 3, fc_units = 8
+                               embedding_dim = 5, num_heads = 3, fc_units = 16
   )
 
   optimizer <- optim_adam(model_tabt$parameters, lr = learning_rate)
@@ -73,8 +73,8 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
 
   # simple attention
 
-  model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),
-                                       units = 8)
+  model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),embed_dim = 5,
+                                       units = 16)
 
   optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, amsgrad = TRUE)
 
@@ -92,24 +92,22 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     basement_enclosure_crawlspace_type + number_of_floors_in_the_insured_building +
     occupancy_type + flood_zone + primary_residence + community_rating_system_discount
 
-  # tabnet
-  rec_tabnet <- recipe(amount_paid_on_building_claim ~ .,
-                       data = analysis_data %>%
-                         select(-loss_proportion, -reported_zip_code)
-  ) %>%
-    step_normalize(all_numeric(), -all_outcomes()) %>%
-    step_novel(all_nominal()) %>%
-    prep(strings_as_factors = TRUE)
-
-  model_tabnet <- tabnet_fit(form,
-                             data = juice(rec_tabnet), epochs = epochs,
-                             num_independent = 1, num_shared = 1, num_steps = 3,
-                             decision_width = 1, attention_width = 1,
-                             learn_rate = learning_rate, verbose = TRUE, batch_size = batch_size,
-                             valid_split = 0.2
-  )
-
-  preds_tabnet <- predict(model_tabnet, bake(rec_tabnet, assessment_data))$.pred
+  # # tabnet
+  # rec_tabnet <- recipe(amount_paid_on_building_claim ~ .,
+  #                      data = analysis_data %>%
+  #                        select(-loss_proportion, -reported_zip_code)
+  # ) %>%
+  #   step_normalize(all_numeric(), -all_outcomes()) %>%
+  #   step_novel(all_nominal()) %>%
+  #   prep(strings_as_factors = TRUE)
+  #
+  # model_tabnet <- tabnet_fit(form,
+  #                            data = juice(rec_tabnet), epochs = 15,
+  #                            verbose = TRUE,
+  #                            valid_split = 0.2
+  # )
+  #
+  # preds_tabnet <- predict(model_tabnet, bake(rec_tabnet, assessment_data))$.pred
 
 
 
@@ -117,55 +115,55 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
     pull(amount_paid_on_building_claim)
 
   list(
-    model_tabnet = model_tabt,
-    model_tabt = model_tabnet,
+    #model_tabnet = model_tabnet,
+    model_tabt = model_tabt,
     model_simple_attn = model_simple_attn,
     rec_nn = rec_nn,
     actuals = actuals,
-    preds_tabnet = preds_tabnet,
+    #preds_tabnet = preds_tabnet,
     preds_simple_attn = preds_simple_attn,
     preds_tabt = preds_tabt
   )
 }
 
 cv_results <- cvfolds$splits %>%
-  lapply(function(x) model_analyze_assess(x, 0.01, 15, 1000))
+  lapply(function(x) model_analyze_assess(x, 0.001, 30, 1000))
 
-cv_results %>%
+model_names_mapping = data.frame(mod = c(#"tabnet",
+                                         "tabt", "simpleattn"), Model = c(#"TabNet",
+                                                                                    "TabTransformer", "Simple Attention"))
+
+require(data.table)
+res = cv_results %>%
   map(function(x) {
     list(
-      rmse_nn = rmse(x$actuals, pmax(x$preds_nn, 0.01)),
-      rmse_nn2 = rmse(x$actuals, pmax(x$preds_nn2, 0.01)),
-      rmse_glm = rmse(x$actuals, x$preds_glm),
-      rmse_glm2 = rmse(x$actuals, x$preds_glm2),
-      rmse_glm_gaussian = rmse(x$actuals, pmax(x$preds_glm_gaussian, 0.01)),
-      rmse_zeros = rmse(x$actuals, 0),
-      mae_nn = mae(x$actuals, x$preds_nn),
-      mae_nn2 = mae(x$actuals, x$preds_nn2),
-      mae_glm = mae(x$actuals, x$preds_glm),
-      mae_glm2 = mae(x$actuals, x$preds_glm2),
-      mae_glm_gaussian = mae(x$actuals, pmax(x$preds_glm_gaussian, 0.01))
+      # rmse_tabnet = rmse(x$actuals, pmax(x$preds_tabnet, 0.01)),
+      rmse_tabt = rmse(x$actuals, pmax(x$preds_tabt, 0.01)),
+      rmse_simpleattn = rmse(x$actuals, x$preds_simple_attn),
+      # mae_tabnet = mae(x$actuals, x$preds_tabnet),
+      mae_tabt = mae(x$actuals, x$preds_tabt),
+      mae_simpleattn = mae(x$actuals, x$preds_simple_attn)
     )
-  }) %>%
-  transpose() %>%
-  as_tibble() %>%
-  pivot_longer(everything()) %>%
-  separate(name, into = c("metric", "mod"), sep = "_", extra = "merge") %>%
-  pivot_wider(names_from = "metric") %>%
+  }) %>% rbindlist()
+res[, id:= 1:5]
+res = res %>% melt.data.table(id.vars = c("id"))
+res = res %>% separate(variable, into = c("metric", "mod"), sep = "_", extra = "merge") %>%
+pivot_wider(names_from = "metric") %>%
   left_join(model_names_mapping, by = "mod") %>%
-  select(-mod) %>%
-  arrange(id) %>%
-  select(Model, rmse, mae) %>%
-  rename(RMSE = rmse, MAE = mae) %>%
+  select(-mod) %>% data.table()
+res[, .(RMSE = mean(rmse), MAE = mean(mae)), keyby = .(Model)] %>%
   knitr::kable(digits = 0, format.args = list(
     big.mark = ",",
     scientific = FALSE
   ), format = "pipe")
 
+
+################
+
 dir.create("model_files")
-saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
-saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
-saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
-torch_save(cv_results[[1]]$model_nn, "model_files/nn1.pt")
-torch_save(cv_results[[1]]$model_nn2, "model_files/nn2.pt")
-torch_save(cv_results[[1]]$model_simple_attn, "model_files/nn_simple_attn.pt")
+#saveRDS(cv_results[[1]]$model_glm, "model_files/glm1.rds")
+#saveRDS(cv_results[[1]]$model_glm2, "model_files/glm2.rds")
+#saveRDS(cv_results[[1]]$rec_nn$steps[[3]]$key, "model_files/rec_nn_key.rds")
+torch_save(cv_results[[1]]$model_tabnet, "model_files/tabnet1.pt")
+saveRDS(cv_results[[1]]$model_tabt, "model_files/tabt.pt")
+torch_save(cv_results[[1]]$model_simple_attn, "model_files/model_simple_attn.pt")
