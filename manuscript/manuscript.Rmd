@@ -46,7 +46,7 @@ On the other hand, several open questions about the use of embeddings within act
 relating to categorical variables with many labels. Whereas embedding layers are usually considered in the context of categorical data,the 
 option exists to quantize numerical data and model it using embeddings, however, the results of doing so have not been investigated. --> Finally, in the past several years, a new type of neural network architecture based on attention [@Vaswani2017] has been successfully used on embeddings in the field of natural language processing and we incorporate attention based models into our predictive Modeling example to demonstrate the use of these models for actuarial purposes.
 
-In this work, we utilize the recently released National Flood Insurance Program (NFIP) dataset [@FederalEmergencyManagementAgency2019] which provides exposure information for policies written under the NFIP since XXXXDateXXXX, as well as the claims data relating to these exposures. We refer the reader to Appendix \ref{NFIP_eda} for an exploratory analysis of this dataset.
+In this work, we utilize the recently released National Flood Insurance Program (NFIP) dataset [@FederalEmergencyManagementAgency2019] which provides exposure information for policies written under the NFIP, as well as the claims data relating to these exposures. We refer the reader to Appendix \ref{EDA} for an exploratory analysis of this dataset.
 
 The rest of this manuscript is organized as follows. Section \ref{lit_review} reviews recent applications of embeddings in the actuarial literature. Section \ref{defns} provides the notation used in the paper and defines GLMs, neural networks and related Modeling concepts, including embeddings and attention. In Section \ref{Modeling}, we provide initial models for the NFIP dataset and consider the influence of hyperparameter choices on the results of the neural network model. That section also considers how successfully the embeddings used in the neural network model can be transferred to a GLM model of the same data and how learned embeddings can be interpreted. We focus on attention based models in Section \ref{attention_models}. Finally, Section \ref{Conclusions} provides a discussion of the results of this paper and considers avenues for future research.
 
@@ -646,62 +646,69 @@ To investigate the predictive value added by the contextual embeddings, a simple
 
 : (\#tab:emd-vs-cembd) RMSE and MAE for GLMs predicting claim severity, embeddings compared with contextual embeddings.
 
+\newpage
+
 # Conclusions {#Conclusions}
 
 This study has focused on how embeddings can be applied within the context of actuarial Modeling, by illustrating a range of approaches: first, relatively simple neural networks with embeddings were defined, the embeddings from these models were reused within traditional GLM models and, finally, more advanced attention based models were studied. These models were demonstrated within the context of a claims severity Modeling problem based on data from the NFIP. Whereas we have only considered severity in this study, it is likely that our findings will replicate for the Modeling of claim frequency, which is usually an easier problem. Our key findings are that processing categorical variables with multi-dimensional embeddings leads to enhanced performance within simple neural networks, and that, by including these within traditional GLM models, the predictive performance of these models can be enhanced, compared to the usual encoding scheme for categorical variables. Some of the attention based models considered within this study performed well, in particular, the TabTransformer model of @Huang2020 appears quite promising for use in actuarial Modeling. The study has also illustrated how embeddings can be visualized using the PCA and t-SNE techniques. We found that, in the case of the NFIP data, it is possible to explain which variables modify the embeddings based on the context of each observation.
 
 Several avenues for future research can be considered. One surprising finding of our work is that the TabNet model performed quite poorly, leading us to conclude that this model appears to be less suitable for actuarial Modeling. Understanding these findings in more detail would be a valuable contribution to the literature. Another helpful contribution would be to investigate the optimal hyperparameters for the TabTransformer model in the context of actuarial Modeling. Finally, extending our findings to a claims frequency example could be considered.
 
+\clearpage
+
 \appendix
+
 
 # Appendix {.unnumbered}
 
-# Exploratory Data Analysis
+# Exploratory Data Analysis {#EDA}
 
 In this appendix we present an exploratory data analysis of the NFIP claims dataset.
 
 Figure \@ref(fig:sev) shows the distribution of the claim size that we model in this study. It can be seen that claim size varies over several orders of magnitude.
 
-```{r sev, echo = FALSE, fig.cap = "Histogram of the Log Claim Amount", out.width = "80%", fig.align = "center"}
+```{r sev, echo = FALSE, fig.cap = "Histogram of the Log Claim Amount", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/claim_size.pdf")
 ```
 
 Figure \@ref(fig:loglog) shows the claim size seemingly follows a relatively heavy-tailed distribution.
 
-```{r loglog, echo = FALSE, fig.cap = "Log-log plot of Claim amount", out.width = "80%", fig.align = "center"}
+```{r loglog, echo = FALSE, fig.cap = "Log-log plot of Claim amount", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/loglog.pdf")
 ```
 
 Figures \@ref(fig:catprimres) - \@ref(fig:catflood) illustrate the distribution of the categorical covariates within the dataset.
 
-```{r catprimres, echo = FALSE, fig.cap = "Distribution of observations across the Primary Residence covariate", out.width = "80%", fig.align = "center"}
+```{r catprimres, echo = FALSE, fig.cap = "Distribution of observations across the Primary Residence covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/primary_residence.pdf")
 ```
 
-```{r catocc, echo = FALSE, fig.cap = "Distribution of observations across the Occupancy type covariate", out.width = "80%", fig.align = "center"}
+```{r catocc, echo = FALSE, fig.cap = "Distribution of observations across the Occupancy type covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/occupancy_type.pdf")
 ```
 
-```{r catbasement, echo = FALSE, fig.cap = "Distribution of observations across the Basement Enclosure and Crawlspace covariate", out.width = "80%", fig.align = "center"}
+```{r catbasement, echo = FALSE, fig.cap = "Distribution of observations across the Basement Enclosure and Crawlspace covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/basement_enclosure_crawlspace_type.pdf")
 ```
 
-```{r catfloors, echo = FALSE, fig.cap = "Distribution of observations across the Number of Floors covariate", out.width = "80%", fig.align = "center"}
+```{r catfloors, echo = FALSE, fig.cap = "Distribution of observations across the Number of Floors covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/number_of_floors_in_the_insured_building.pdf")
 ```
 
-```{r catflood, echo = FALSE, fig.cap = "Distribution of observations across the Flood Zone covariate", out.width = "80%", fig.align = "center"}
+```{r catflood, echo = FALSE, fig.cap = "Distribution of observations across the Flood Zone covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone.pdf")
 ```
 
 Similarly, Figures \@ref(fig:numcov) - \@ref(fig:numdisc) illustrate the distribution of the continuous covariates within the dataset.
 
-```{r numcov, echo = FALSE, fig.cap = "Histogram of the Building Coverage covariate", out.width = "80%", fig.align = "center"}
+```{r numcov, echo = FALSE, fig.cap = "Histogram of the Building Coverage covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/total_building_insurance_coverage.pdf")
 ```
 
-```{r numdisc, echo = FALSE, fig.cap = "Distribution of the Comunity Rating System Discount covariate", out.width = "80%", fig.align = "center"}
+```{r numdisc, echo = FALSE, fig.cap = "Distribution of the Comunity Rating System Discount covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/community_rating_system_discount.pdf")
 ```
 
-# References {.unnumbered
+\clearpage
+
+# References {.unnumbered}
