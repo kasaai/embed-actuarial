@@ -145,9 +145,9 @@ p_1 <- tsne_out$Y %>%
     # geom_label_repel(aes(label = class)) +
     theme_classic()
 p
-p1 <- make_tsne_plot(wts, lbls, 0.1)
-p2 <- make_tsne_plot(wts, lbls, 0.5)
-p3 <- make_tsne_plot(wts, lbls, 1)
+p1 <- make_tsne_plot(wts, lbls, 2)
+p2 <- make_tsne_plot(wts, lbls, 3)
+p3 <- make_tsne_plot(wts, lbls, 5)
 p4 <- make_tsne_plot(wts, lbls, 10)
 library(patchwork)
 p_all <- (p1 + theme(legend.position = "none") + p2) / (p3 + theme(legend.position = "none") + p4) + plot_layout(guides = "collect")
