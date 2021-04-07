@@ -76,7 +76,7 @@ model_analyze_assess <- function(splits, learning_rate = 1, epochs = 10, batch_s
   model_simple_attn <- simple_net_attn(env$cardinalities, length(numeric_cols),embed_dim = 5,
                                        units = 16)
 
-  optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate, amsgrad = TRUE)
+  optimizer <- optim_adam(model_simple_attn$parameters, lr = learning_rate)
 
   train_loop(model_simple_attn, train_dl, valid_dl, epochs, optimizer, patience = 5, "simple_attn")
 

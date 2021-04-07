@@ -1,5 +1,5 @@
 ---
-title: Categorical Predictor Embeddings in Actuarial Modeling
+title: Categorical Predictor Embeddings and Attention Based Neural Networks in Actuarial Modeling
 authors:
   - name: Kevin Kuo 
     affiliation: RStudio and Kasa AI
@@ -10,10 +10,12 @@ authors:
 abstract: |
   Enter the text of your abstract here.
 keywords:
-  - blah
-  - blee
-  - bloo
-  - these are optional and can be removed
+  - categorical data
+  - neural networks
+  - embeddings
+  - attention
+  - severity modelling
+  - National Flood Insurance Program 
 bibliography: references.bib
 output:
   bookdown::pdf_book:
@@ -71,7 +73,7 @@ relating to categorical variables with many labels. Whereas embedding layers are
 option exists to quantize numerical data and model it using embeddings, however, the results of doing so have not been investigated. -->
 Finally, in the past several years, a new type of neural network architecture based on attention [@Vaswani2017] has
 been successfully used on embeddings in the field of natural language processing and we incorporate attention 
-based models into our predictive modelling example.
+based models into our predictive modelling example to demonstrate the use of these models for actuarial purposes.
 
 In this work, we utilize the recently released National Flood Insurance Program (NFIP) dataset 
 [@FederalEmergencyManagementAgency2019] which provides exposure information for policies written under the NFIP since 
@@ -864,11 +866,12 @@ during training. While we allow for an extra key in the embedding dictionary, th
 weights are not updated during training, which could lead to nonsensical predictions in the validation or test sets. To
 circumvent this issue, before applying the trained model but after the final optimization epoch, we update the weights
 for the unseen levels manually. In practice, a common approach is to take an average value 
-of some sort of the weights of theother levels. In our case, we take the median (if there are multiple, the lower of
+of some sort of the weights of the other levels. In our case, we take the median (if there are multiple, the lower of
 the two), but a mean, mean weighted by frequency of observations, or trimmed mean could be used.
 
 In Table \@ref(tab:cv-results), we exhibit the cross-validated performance metrics of each of the models. We report
-both the root mean squared error (RMSE) and the mean absolute error (MAE); we note that these are just a couple of many potential metrics to use, and are so chosen for their interpretability and prevalence in the literature for comparing
+both the root mean squared error (RMSE) and the mean absolute error (MAE); we note that these are just two of many 
+potential metrics to use, and are so chosen for their interpretability and prevalence in the literature for comparing
 different types of models. Recall that, between the two metrics, RMSE penalizes large mispredictions than MAE. Also,
 in the optimization process, GLM with a gamma distribution optimizes the deviance, rather than MSE directly.
 
@@ -876,13 +879,14 @@ We see that the neural networks generally outperform the GLMs; however, what is 
 embeddings in place of categorical levels improves the GLM, at least from the RMSE perspective.
 
 While linear regression (i.e., the specific case of GLM with a gaussian distribution and identity link function) is not
-commonly used for severity modeling, we throw it into the mix as a benchmark, a practice we recommend in order to
+commonly used for severity modeling, we add it into the mix as a benchmark, a practice we recommend in order to
 check reasonableness of other models' results. Since it is possible for a linear
 regression to output negative values, we cap the predictions below by 0.01 during scoring. Somewhat surprisingly, in 
 the problem we
-are considering, it performs similar to the more complex neural network models in the RMSE metric (which it optimizes
-for, as the unit deviance of the normal distribution correspond to MSE.) Of course, this is not to discredit neural
-networks or GLMs, as the experiments are performed without extensive hyperparameter tuning or feature engineering.
+are considering, it performs similarly to the more complex neural network models in the RMSE metric (which it optimizes
+for, as the unit deviance of the normal distribution correspond to MSE.) On the other hand, the performance of the linear model
+is quite significantly worse on the MAE metric. Of course, this is not to discredit neural networks or GLMs, as the experiments 
+are performed without extensive hyperparameter tuning or feature engineering.
 
 Table: (\#tab:cv-results) Cross validation results.
 
@@ -940,25 +944,46 @@ architecture is shown in Figure Figure \@ref(fig:nn-3).
 ```{r nn-3, echo = FALSE, fig.cap = "Architecture of Model 6.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/tabt.pdf")
 ```
-
 ### Model 7: TabNet
 The final model we consider in this subsection is the TabNet architecture. The structure of the model is quite similar to Model 6, except 
 that a more specialized form of self-attention is used to select the most important covariates for the modelling problem. 
 
+## Training and Inference {#training-inference-attn}
+We follow a similar training setup for the three attention based models, to the neural networks discussed in the previous section. For Models 5 and 6, 
+we utilize the \texttt{Adam} optimizer as before, however, due to the increased complexity of the models in this section,
+we use learning rate of 0.001 (compared to 0.01 for the simpler models). Reflecting this reduced learning rate, 
+we train on the analysis set for a maximum of 150 epochs, and select the best model based on the lowest loss achieved on the assessment. Moreover, since these models are
+more complex than those tested in the previous section, we also add some minimal regularization using dropout [@srivastava2014dropout] to the attention layers 
+and the last layer of the network. Dropout functions by setting some components of the network randomly to zero during each epoch of training. This forces each
+component of the network to learn an independent representation of the data. In this section, we drop out components with a probability of 2.5\%. A final detail is that, 
+for both of these models, we use an embedding dimension of size 16 for each of the categorical covariates, since the attention mechanism requires that the embeddings 
+be of a common length. For the TabTransformer model, we use a row embedding of dimension 4.
+
+For Model 7, we use the suggested training setup that utilizes the \texttt{Adam} optimizer with a learning rate of 0.02, and train for 15 epochs (since longer training
+times did not lead to improved performance). 
+
+In Table \@ref(tab:cv-results-attn), we show the cross-validated performance metrics of each of the models, 
+as well as the two best performing models from the previous section. As before, we report both the root mean squared error (RMSE) 
+and the mean absolute error (MAE). The results show that Model 5, which simply adds attention to Model 4, achieves slightly worse
+performance than Model 4 as measured by the RMSE, but using the MAE as a metric, outperforms Model 4. Thus, there is some room to argue that
+for tabular data modelling that uses embeddings, the use of attention within models should be considered. Disappointingly, the TabNet 
+architecture performs poorly, perhaps due to insufficient hyperparameter tuning, but indicating that ``out of the box", TabNet does not
+appear to work well for this modelling task. Finally, the TabTransformer model shows the best performance of all models considered in 
+this research, beating the others by a significant margin on both the RMSE and MAE metrics.
+
+Table: (\#tab:cv-results-attn) Cross validation results for Models 5-7.
+
+|Model                                                                          |   RMSE|    MAE|
+|:-----------------------------------------------------------------------------|------:|------:|
+|Model 4: MLP with multidimensional embeddings                                 | 60,973| 37,574|
+|Model 5: Simple Attention                                                     | 61,022| 37,025|
+|Model 6: TabNet                                                               | 62,938| 38,386|
+|Model 7: TabTransformer                                                       | 59,900| 36,343|
+|Linear regression, predictions capped below at 0.01                           | 60,879| 38,431|
+
+In what follows, we focus on understanding the TabTransformer model in more detail.
+
 ## Explaining Attention Based models
-
-## Results
-
-|Model            |   RMSE|    MAE|
-|:----------------|------:|------:|
-|Simple Attention | 62,031| 38,501|
-|TabNet           | 62,938| 38,386|
-|TabTransformer   | 61,420| 38,309|
-
-|Model            |   RMSE|    MAE|
-|:----------------|------:|------:|
-|Simple Attention | 63,309| 38,526|
-|TabTransformer   | 61,275| 38,320|
 
 # Conclusions {#Conclusions}
 

@@ -317,7 +317,7 @@ tabtransformer <- nn_module(
         self$embed_dim <- embedding_dim
 
         self$col_embedder <- embedding_with_position(cardinalities, embedding_dim)
-        self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads, dropout = 0.05)
+        self$attn <- nn_multihead_attention(embedding_dim + 1, num_heads, dropout = 0.01)
         self$lnorm1 <- nn_layer_norm(embedding_dim + 1)
         self$lnorm2 <- nn_layer_norm(embedding_dim + 1)
         self$linear1 <- nn_linear(embedding_dim + 1, 4 * (embedding_dim + 1))
