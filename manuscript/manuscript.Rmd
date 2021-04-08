@@ -3,12 +3,17 @@ title: Categorical Predictor Embeddings and Attention Based Neural Networks in A
 authors:
   - name: Kevin Kuo 
     affiliation: RStudio and Kasa AI
-    email: kevin@kasa.ai
+    email: kevinykuo@gmail.com 
   - name: Ronald Richman
-    affiliation: QED Actuaries and Consultants
-    email: ronaldrichman@gmail.com
+    affiliation: QED Actuaries and Consultants and University of the Witwatersrand
+    email: ron@ronaldrichman.co.za
 abstract: |
-  Enter the text of your abstract here.
+  Categorical data are ubiquitous in insurance modeling. In this paper, we explore in depth how these data can be
+  processed with categorical embeddings in the context of claim severity modeling. We develop several models that range
+  in complexity from simple neural networks to state-of-the-art attention based architectures and calibrate categorical
+  embeddings using these models. We illustrate the utility of these learned embeddings as pretrained features in a
+  generalized linear model. We discuss methods for visualizing and interpreting learned embeddings. Finally, we explore
+  how attention based models can contextually augment embeddings, leading to enhanced predictive performance.
 keywords:
   - categorical data
   - neural networks
@@ -42,13 +47,11 @@ Recently, several studies of insurance problems have applied an alternative appr
 
 This approach to modeling categorical data has several advantages over more traditional treatments of categorical data. Using categorical embeddings instead of traditional techniques has been shown to increase predictive accuracy of models, for example, see @Richman2018 in the context of pricing. Models incorporating categorical embeddings can be pre-calibrated to traditional actuarial models, increasing the speed with which these models can be calibrated and leading to models with better explainability [@wuthrich2019yes]. Finally, the similarity between the vectors learned for different categories can be inspected, sometimes leading to insights into the workings of models, see, for example, @Kuo2019.
 
-On the other hand, several open questions about the use of embeddings within actuarial work remain, which we aim to address in this study. First, hyperparameter settings for embeddings, such as the dimensions of the embedding layer and the use of regularization techniques such as dropout or normalization, that achieve optimal predictive performance has not yet been studied in detail in the actuarial literature. In this work, we aim to study how embeddings using different settings perform in the context of a large-scale predictive modeling problem, and give guidance on the process that can be followed to determine this in other problems. Although neural network have been shown to achieve excellent predictive accuracy on actuarial tasks, many actuaries still prefer to use GLM models for pricing tasks, thus, the issue of whether transferring embeddings to GLM models can achieve better performance is considered in this paper. <!-- Traditional actuarial techniques such as credibility theory have been used to work with some types of categorical data, but no study has been --> <!-- performed whether this can be applied within embeddings; here, we investigate whether performance is enhanced by applying credibility theory on embeddings 
-relating to categorical variables with many labels. Whereas embedding layers are usually considered in the context of categorical data,the 
-option exists to quantize numerical data and model it using embeddings, however, the results of doing so have not been investigated. --> Finally, in the past several years, a new type of neural network architecture based on attention [@Vaswani2017] has been successfully used on embeddings in the field of natural language processing and we incorporate attention based models into our predictive modeling example to demonstrate the use of these models for actuarial purposes.
+On the other hand, several open questions about the use of embeddings within actuarial work remain, which we aim to address in this study. First, hyperparameter settings for embeddings, such as the dimensions of the embedding layer and the use of regularization techniques such as dropout or normalization, that achieve optimal predictive performance has not yet been studied in detail in the actuarial literature. In this work, we aim to study how embeddings using different settings perform in the context of a large-scale predictive modeling problem, and give guidance on the process that can be followed to determine this in other problems. Although neural network have been shown to achieve excellent predictive accuracy on actuarial tasks, many actuaries still prefer to use GLM models for pricing tasks, thus, the issue of whether transferring embeddings to GLM models can achieve better performance is considered in this paper. Finally, in the past several years, a new type of neural network architecture based on attention [@Vaswani2017] has been successfully used on embeddings in the field of natural language processing and we incorporate attention based models into our predictive modeling example to demonstrate the use of these models for actuarial purposes.
 
-In this work, we utilize the recently released National Flood Insurance Program (NFIP) dataset [@FederalEmergencyManagementAgency2019] which provides exposure information for policies written under the NFIP, as well as the claims data relating to these exposures. We refer the reader to Appendix \ref{EDA} for an exploratory analysis of this dataset.
+In this work, we utilize the recently released National Flood Insurance Program (NFIP) dataset [@FederalEmergencyManagementAgency2019] which provides exposure information for policies written under the NFIP, as well as the claims data relating to these exposures.
 
-The rest of this manuscript is organized as follows. Section \ref{lit_review} reviews recent applications of embeddings in the actuarial literature. Section \ref{defns} provides the notation used in the paper and defines GLMs, neural networks and related modeling concepts, including embeddings and attention. In Section \ref{modeling}, we provide initial models for the NFIP dataset and consider the influence of hyperparameter choices on the results of the neural network model. That section also considers how successfully the embeddings used in the neural network model can be transferred to a GLM model of the same data and how learned embeddings can be interpreted. We focus on attention based models in Section \ref{attention_models}. Finally, Section \ref{Conclusions} provides a discussion of the results of this paper and considers avenues for future research.
+The rest of this manuscript is organized as follows. Section \ref{lit_review} reviews recent applications of embeddings in the actuarial literature. Section \ref{defns} provides the notation used in the paper and defines GLMs, neural networks and related modeling concepts, including embeddings and attention. In Section \ref{modeling}, we provide initial models for the NFIP dataset and consider how successfully the embeddings used in the neural network model can be transferred to a GLM model of the same data and how learned embeddings can be interpreted. We focus on attention based models in Section \ref{attention_models}. Finally, Section \ref{Conclusions} provides a discussion of the results of this paper and considers avenues for future research.
 
 # Literature Review {#lit_review}
 
@@ -60,7 +63,7 @@ Generalized Linear Mixed Models (GLMMs) are an extension of GLMs that are design
 
 Embedding layers represent a different approach to the problem of modeling categorical data that was recently introduced in an actuarial context. Note that in the next section, we reflect on similarities between the conventional approaches discussed above and embedding layers. @Richman2018 reviewed the concept of embedding layers and connected the sharing of information across categories to the familiar concept of credibility theory. In that work, two applications of embedding layers were demonstrated. The first of these was in a Property and Casualty (P&C) pricing context, it was shown that the out-of-sample accuracy of a neural network trained to predict claims frequencies on motor third party liability was enhanced by modeling the categorical variables within this dataset using embedding layers. Second, a neural network with embedding layers was used to model all of the mortality rates in the Human Mortality Database, where the differences in population mortality across countries and the differences in mortality at different ages were modelled with embedding layers, again producing more accurate out of sample performance than the other models tested.
 
-Contemporaneous with that work is the DeepTriangle model of @Kuo2019, which applied recurrent neural networks to the problem of Incurred but not Reported (IBNR) loss reserving, to model jointly the paid and incurred losses in the Schedule P dataset. Embedding layers were used to capture the effect of differences in reserving delays and loss ratios for each company in the Schedule P dataset. Evaluating the results of the DeepTriangle method showed that the out of sample performance of the model (tested against the lower triangles in the Schedule P dataset) exceeded that of traditional IBNR reserving techniques.
+Contemporaneous with that work is the DeepTriangle model of @Kuo2019, which applied recurrent neural networks to the problem of Incurred but not Reported (IBNR) loss reserving, to model jointly the paid and incurred losses in the NAIC Schedule P dataset. Embedding layers were used to capture the effect of differences in reserving delays and loss ratios for each company in the Schedule P dataset.
 
 Many other applications of embeddings have subsequently appeared in the actuarial literature. Within mortality forecasting, @Richman2019d and @Richman2020 both apply embeddings layers to model and forecast mortality rates on a large scale. @wuthrich2019yes discussed how embeddings can be calibrated using GLM techniques and then incorporated into a combined actuarial neural network, with subsequent contributions in P&C pricing by @schelldorfer2019nesting and in IBNR reserving by @Gabrielli2019c and @Gabrielli2019. Other applications in IBNR reserving are in @Kuo2020 and @Delong2020a who use embedding layers to model individual claims development.
 
@@ -74,11 +77,11 @@ $$
 
 In this study, will use mainly use GLMs and neural networks to approximate the function $f(.)$.
 
-The predictor variables that we consider here are comprised of two types: continuous variables, taking on numerical values and represented by the matrix $X_{num}$ with $J^{num}$ columns, and categorical variables, which take on discrete values indicating one of several possible categories, represented by the matrix $X_{cat}$ with $J^{cat}$ columns, such that $J^{num} + J^{cat} = J$.
+The predictor variables that we consider here are comprised of two types: continuous variables, taking on numerical values and represented by the matrix $X_{num}$ with $|J^{num}|$ columns, and categorical variables, which take on discrete values indicating one of several possible categories, represented by the matrix $X_{cat}$ with $|J^{cat}|$ columns, such that $|J^{num}| + |J^{cat}| = J$.
 
 ## Categorical data modeling {#catdata}
 
-A categorical variable $X_j, j \in J_{cat}$ takes as its value only one of a finite number of labels. Let the set of labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ is the cardinality or number of levels, in $\mathcal{P}^j$. One-hot encoding maps each value $x_{i,j}$ of $X_j$ to $n_\mathcal{P}^j$ indicator variables, which take a value of $1$ if the label of $x_{i,j}$ corresponds to the level of the indicator variable, and $0$ otherwise. An example of one-hot encoding is shown in Table \@ref(tab:onehot).
+A categorical variable $X_j, j \in J^{cat}$ takes as its value only one of a finite number of labels. Let the set of labels be $\mathcal{P}^j = \{p^j_1, p^j_2,\dots, p^j_{n_{\mathcal{P}^j}} \}$, where $n_\mathcal{P}^j = |\mathcal{P}^j|$ is the cardinality or number of levels, in $\mathcal{P}^j$. One-hot encoding maps each value $x_{i,j}$ of $X_j$ to $n_\mathcal{P}^j$ indicator variables, which take a value of $1$ if the label of $x_{i,j}$ corresponds to the level of the indicator variable, and $0$ otherwise. An example of one-hot encoding is shown in Table \@ref(tab:onehot).
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
 require(dplyr)
@@ -266,7 +269,7 @@ In this section, we walk through a simple predictive modeling exercise in order 
 
 ## Problem Description and Experiment Setup
 
-The working example for our experiments is as follows: Given a set of claim characteristics, we predict the losses paid on the property coverage of the policy. The data we use comes from the National Flood Insurance Program (NFIP) and is made available by the OpenFEMA initiative of the Federal Emergency Management Agency (FEMA)[^1]. Two datasets are made available by OpenFEMA: A policies dataset with exposure information, and a claims dataset with claims transactions, including paid amounts. Because there is no way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While the complete dataset contains over two million transactions, for the purposes of our experiments, we limit ourselves to data from 2000 to 2019 and further subsample 100K data points to make experiments feasible on a CPU. The dataset includes a rich variety of variables, from occupancy type to flood zone. For our models, we work with a few selected variables that represent continuous and discrete variables of low and high cardinalities, which we list in Table \@ref(tab:variables)
+The working example for our experiments is as follows: Given a set of claim characteristics, we predict the losses paid on the property coverage of the policy. The data we use comes from the NFIP and is made available by the OpenFEMA initiative of the Federal Emergency Management Agency (FEMA)[^1]. Two datasets are made available by OpenFEMA: A policies dataset with exposure information, and a claims dataset with claims transactions, including paid amounts. Because there is no way to associate records of the two datasets, we are limited to fitting severity models on the claims dataset. While the complete dataset contains over two million transactions, for the purposes of our experiments, we limit ourselves to data from 2000 to 2019 and further subsample 100K data points to make experiments feasible on a CPU. The dataset includes a rich variety of variables, from occupancy type to flood zone, and a brief exploratory data analysis can be found in Appendix \ref{EDA}. For our models, we work with a few selected variables that represent continuous and discrete variables of low and high cardinalities, which we list in Table \@ref(tab:variables)
 
 [^1]: <https://www.fema.gov/about/reports-and-data/openfema>
 
@@ -297,7 +300,7 @@ The response variable we take from the dataset is "Amount Paid on Building Claim
 
 For our experiments, we set up a 5-fold cross validation scheme that is applied to each of the models we introduce. In Sections \ref{models} and \ref{interpretation}, the tables and figures are based on a single fold of the cross validation split. In Section \ref{training-inference}, we provide the cross-validated performance metrics of each of the models.
 
-We note that the focus of our contribution is on applications of categorical embeddings in predictive modeling, rather than on fine-tuning models in order to beat or establish a benchmark. To this end, we do not perform systematic hyperparameter tuning in our experiments, and the performance metrics are provided to show that reasonable models utilizing categorical embeddings can be developed (note in the next section, the models achieve significantly better performance). However, as we describe the modeling procedure and results, we provide commentary on recommended practices in practical applications, especially with respect to the neural network models.
+We note that the focus of our contribution is on applications of categorical embeddings in predictive modeling, rather than on fine-tuning models in order to beat or establish a benchmark. To this end, we do not perform systematic hyperparameter tuning in our experiments, and the performance metrics are provided to show that reasonable models utilizing categorical embeddings can be developed. However, as we describe the modeling procedure and results, we provide commentary on recommended practices in practical applications, especially with respect to the neural network models.
 
 ## Models {#models}
 
@@ -468,11 +471,11 @@ In this section, we focus on ways to visualize the learned embeddings. In the au
 For Model 2, the neural network with one-dimensional embeddings, the task is simple: we can simply plot the levels on a line, as in Figure \@ref(fig:occ-type). In the case of `flood_zone`, where we happen to have the luxury of knowing a priori the meaning of the prefixes, we can plot them separately, as in Figure \@ref(fig:flood-zone) to see how the model mapped them.
 
 ```{r occ-type, echo=FALSE, fig.cap="Learned embeddings of occupancy type visualized on a number line.", out.width = "80%", fig.align="center"}
-knitr::include_graphics("images/occupancy_type.png")
+knitr::include_graphics("images/occupancy_type_embed.png")
 ```
 
 ```{r flood-zone, echo = FALSE, fig.cap="Learned embeddings of flood zone by prefix.", out.width = "60%", fig.align = "center"}
-knitr::include_graphics("images/flood_zone.png")
+knitr::include_graphics("images/flood_zone_embed.png")
 ```
 
 For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than two dimensions. The standard approachs for this are principal component analysis (PCA; @shlens2014tutorial) and t-distributed stochastic neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate.
@@ -529,7 +532,7 @@ H(P_i) = -\sum_j p_{j|i}\log_2 p_{j|i},
 
 and $P_i$ is the Gaussian parameterized by $x_i$ and $\sigma_i$. During training, t-SNE looks for $P_i$ that have perpelxity corresponding to the user input. Finally, the objective as stated in Equation \@ref(eq:tsne-obj) is differentiable, and is trained via gradient descent.
 
-While t-SNE is a powerful visualization technique, there are a few points the modeler should be mindful of in practice. We refer the reader to @wattenberg2016how for a more thorough discussion, but stress here that the resulting plot can be very sensitive to the perplexity hyperparameter. In addition, for our use case, which is to explore the learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our reasonable range of hyperparameter values need to be adjusted down. In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in Model 3 with various perplexity settings: 2, 3, 5, and 10; the learning rate and the number of steps are fixed at 100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In particular, flood zone D appears in its own cluster, which implies it is far away from other levels in the embedding space. When the perplexity is set to 10 (and beyond), however, we start to lose the geometric properties.
+While t-SNE is a powerful visualization technique, there are a few points the modeler should be mindful of in practice. We refer the reader to @wattenberg2016how for a more thorough discussion, but stress here that the resulting plot can be very sensitive to the perplexity hyperparameter. In addition, for our use case, which is to explore the learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our reasonable range of hyperparameter values need to be adjusted down. In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in Model 3 with various perplexity settings: 2, 3, 5, and 10; the learning rate and the number of steps are fixed at 100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In particular, flood zone D appears in its own cluster, which implies it is far away from other levels in the embedding space, *as seen by the model*. When the perplexity is set to 10 (and beyond), however, we start to lose the geometric properties.
 
 ```{r flood-zone-tsne, echo = FALSE, fig.cap="t-SNE plots of learned embeddings of flood zone in Model 4, with various perplexity values. From left to right then top to bottom: 2, 3, 5, and 10.", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_tsne.png")
@@ -590,7 +593,7 @@ knitr::include_graphics("images/sna2.pdf")
 
 ### Model 6: TabTransformer
 
-Whereas Model 5 makes a simple modification to the structure of Model 4, the TabTransformer model is slightly more complex. With respect to similarities between Model 5 and 6, both use embeddings with a standard 8 dimensions for each categorical covariate. In terms of differences, Model 6 uses a Transformer layer in place of self-attention and a positional encoding of a single dimension, i.e. $d_col = 1$. The TabTransformer architecture is shown in Figure \@ref(fig:nn-3).
+Whereas Model 5 makes a simple modification to the structure of Model 4, the TabTransformer model is slightly more complex. With respect to similarities between Model 5 and 6, both use embeddings with a standard 8 dimensions for each categorical covariate. In terms of differences, Model 6 uses a Transformer layer in place of self-attention and a positional encoding of a single dimension, i.e. $d_{col} = 1$. The TabTransformer architecture is shown in Figure \@ref(fig:nn-3).
 
 ```{r nn-3, echo = FALSE, fig.cap = "Architecture of Model 6.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/tabt.pdf")
@@ -636,7 +639,7 @@ The figure shows that, whereas the first principal component of the embeddings o
 knitr::include_graphics("images/emb_vs_cembd_exp.pdf")
 ```
 
-To investigate the predictive value added by the contextual embeddings, a simple Gamma GLM was fit to these 10 000 observations, with the goal of predicting the claim amount based only on either the embeddings or the contextual embeddings. As shown in Table \@ref(tab:emd-vs-cembd), the performance of the latter model, as indicated by the RMSE and MAE metrics is significantly better, in other words, the contextual embeddings that incorporate information across all of the categorical variables are significantly better predictors of claim severity compared with the embeddings.
+To investigate the predictive value added by the contextual embeddings, a simple Gamma GLM was fit to these 10 000 observations, with the goal of predicting the claim amount based only on either the embeddings or the contextual embeddings. As shown in Table \@ref(tab:emd-vs-cembd), the performance of the latter model, as indicated by the RMSE and MAE metrics is better, in other words, the contextual embeddings that incorporate information across all of the categorical variables are better predictors of claim severity compared with the embeddings.
 
 | Embedding Type       |     RMSE |      MAE |
 |:---------------------|---------:|---------:|
