@@ -1,5 +1,5 @@
 ---
-title: Categorical Predictor Embeddings and Attention Based Neural Networks in Actuarial Modeling
+title: Embeddings and Attention in Predictive Modeling 
 authors:
   - name: Kevin Kuo 
     affiliation: RStudio and Kasa AI
@@ -8,11 +8,11 @@ authors:
     affiliation: QED Actuaries and Consultants and University of the Witwatersrand
     email: ron@ronaldrichman.co.za
 abstract: |
-  Categorical data are ubiquitous in insurance modeling. In this paper, we explore in depth how these data can be
-  processed with categorical embeddings in the context of claim severity modeling. We develop several models that range
-  in complexity from simple neural networks to state-of-the-art attention based architectures and calibrate categorical
-  embeddings using these models. We illustrate the utility of these learned embeddings as pretrained features in a
-  generalized linear model. We discuss methods for visualizing and interpreting learned embeddings. Finally, we explore
+  We explore in depth how categorical data can be
+  processed with embeddings in the context of claim severity modeling. We develop several models that range
+  in complexity from simple neural networks to state-of-the-art attention based architectures that utilize embeddings. 
+  We illustrate the utility of learned embeddings from neural networks as pretrained features in
+  generalized linear models, and discuss methods for visualizing and interpreting embeddings. Finally, we explore
   how attention based models can contextually augment embeddings, leading to enhanced predictive performance.
 keywords:
   - categorical data
@@ -573,6 +573,8 @@ embedding - basis expansion Add a distribution to the embeddings Can insights fr
 
 In this section we investigate whether the predictive performance of the models applied to the NFIP dataset can be improved by applying the attention based models defined in Section \ref{attention}. We discuss the implementation of each of the Simple Attention, TabTransformer and TabNet models in the following sub-section, then discuss how the modifications made to the embeddings through the application of attention can be visualized in the following sub-section. We conclude the section with a discussion of the model results.
 
+\newpage
+
 ## Models
 
 In this subsection, we develop the following models:
@@ -601,7 +603,13 @@ knitr::include_graphics("images/tabt.pdf")
 
 ### Model 7: TabNet
 
-The final model we consider in this subsection is the TabNet architecture. The structure of the model is quite similar to Model 6, except that a more specialized form of self-attention is used to select the most important covariates for the modeling problem.
+The final model we consider in this subsection is the TabNet architecture. In TabNet, similar to decision trees which 
+it is inspired by, the input features are processed
+sequentually in a number of decision steps. In each decision step, a different subset of features are weighted more
+than the rest based on masks defined by attention modules applied to information from the previous step. The output
+of each step consists of information for the next decision step, and also an output representation that is set aside 
+then aggregated at the end, along with other decision step outputs, in order to product the final model output.
+Due to the complexity, we refer the reader to @Ark2019 for the full architectural details. 
 
 ## Training and Inference {#training-inference-attn}
 
