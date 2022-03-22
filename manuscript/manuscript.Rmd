@@ -623,8 +623,8 @@ In Table \@ref(tab:cv-results-attn), we show the cross-validated performance met
 |:----------------------------------------------------|-------:|-------:|
 | Model 4: MLP with multidimensional embeddings       | 60,973 | 37,574 |
 | Model 5: Simple Attention                           | 60,601 | 36,739 |
-| Model 6: TabNet                                     | 62,938 | 38,386 |
-| Model 7: TabTransformer                             | 59,900 | 36,343 |
+| Model 6: TabTransformer                             | 59,900 | 36,343 |
+| Model 7: TabNet                                     | 62,938 | 38,386 |
 | Linear regression, predictions capped below at 0.01 | 60,879 | 38,431 |
 
 : (\#tab:cv-results-attn) Cross validation results for Models 5-7.
