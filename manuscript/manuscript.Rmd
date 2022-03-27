@@ -423,7 +423,16 @@ Regardless of the hyperparameters chosen, care needs to be taken in ensuring the
 the embeddings, we utilize the information from the response variables. Therefore, the holdout data must not be seen by the neural network
 training process or the GLM fitting process.
 
-Since we only have a few parameters in this model, we exhibit the full list of fitted coefficients in Table \@ref(tab:glm2).
+Since we only have a few parameters in this model, we exhibit the full list of fitted coefficients in Table \@ref(tab:glm2). 
+For each categorical variable, there is only one coefficient estimate. This is because each categorical variable has been replaced by a
+single scalar value, so we treat it as if it were any other continuous predictor.
+
+One interesting ramification of our choice of embedding dimension of 1 in this example is that we can compute the "implied relativities"
+of the factor levels in the new GLM. Since each level corresponds to a unique scalar value, we can obtain its contribution to the
+linear predictor by multiplying by the coefficient estimate of the variable. For example, multiplying the estimate of -0.075 for `occupancy_type` in
+Table \@ref(tab:glm2) by each value in Table \@ref(tab:embeddings-flood-zone), we obtain the unnormalized contributions of each level, which can
+then be exponentiated and normalized with respect to the base level `Single family residence` in order to obtain the implied relativities,
+which could then be compared with the first GLM's output in Table \@ref(tab:relativities).
 
 | term                                     | estimate |
 |:-----------------------------------------|---------:|
