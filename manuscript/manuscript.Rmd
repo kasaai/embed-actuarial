@@ -419,6 +419,10 @@ where $z_{i,j}$ represents the embedding value for $i$th instance of the categor
 
 Although, in this particular example, we incorporate one-dimensional embeddings, one can easily include multidimensional embeddings, which would increase the model's flexibility. The modeler would need to balance the potential additional lift with overfitting and some loss of interpretability, since, with one-dimensional embeddings, our GLM structure dictates that there is a monotonic relationship between the predicted response and the input embedding, which could be desirable in certain use cases (and undesirable in others.)
 
+Regardless of the hyperparameters chosen, care needs to be taken in ensuring the integrity of the model validation process, since when we train
+the embeddings, we utilize the information from the response variables. Therefore, the holdout data must not be seen by the neural network
+training process or the GLM fitting process.
+
 Since we only have a few parameters in this model, we exhibit the full list of fitted coefficients in Table \@ref(tab:glm2).
 
 | term                                     | estimate |
