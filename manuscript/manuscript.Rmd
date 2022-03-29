@@ -484,11 +484,7 @@ knitr::include_graphics("images/occupancy_type_embed.png")
 knitr::include_graphics("images/flood_zone_embed.png")
 ```
 
-For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than two dimensions. The standard approachs for this are principal component analysis (PCA; @shlens2014tutorial) and t-distributed stochastic neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate.
-
-### Principal Component Analysis
-
-In both approaches, the overarching theme is as follows: we have a collection of points in higher dimensional space, $\mathcal{X} = \{x_1, x_2, \dots, x_n\}$ that we wish to map to some lower dimensional space, typically $\mathbb{R}^2$, obtaining $\mathcal{Y} = \{y_1, y_2, \dots, y_n\}$. PCA performs a linear change of coordinates on the input data so that the variance of the data is maximized along each orthogonal coordinate, also known as *principal component*, successively. Formally, if we denote $\mathbf{X}$ and $\mathbf{Y}$ to be the matrices whose columns are elements of $\mathcal{X}$ and $\mathcal{Y}$, respectively, this can be represented as looking for an orthonormal matrix $\mathbf{P}$ in $\mathbf{Y} = \mathbf{PX}$ such that the covariance matrix of $\mathbf{Y}$, $\frac{1}{n}\mathbf{YY^T}$, is diagonal. Here, the rows of $\mathbf{P}$ are the principal components that define the resulting coordinate system. It turns out that that these principal components are the eigenvectors of the covariance matrix of $\mathbf{X}$, i.e., $\mathbf{C_X} \equiv \frac{1}{n}\mathbf{XX^T}$. In practice, numerical procedures, including R's \texttt{prcomp()} which we use, utilize singular value decomposition (SVD) to compute the eigenvectors.
+For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than two dimensions. The standard approaches for this are principal component analysis (PCA; @shlens2014tutorial) and t-distributed stochastic neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate. For a technical review of these methods, refer to Appendix \ref{dim-red].
 
 In Figure \@ref(fig:flood-zone-pca), we plot the learned embeddings for `flood_zone` in Model 3 on the coordinate system defined by the first two principle components. In our case, however, we are not able to identify discernable clusters in the plot. From inspecting the matrix decomposition results, we see that the cumulative proportion of variance for the first two principal components are just 0.18, which may suggest that perhaps PCA is not the most appropriate dimensionality reduction technique in this case.
 
@@ -496,49 +492,7 @@ In Figure \@ref(fig:flood-zone-pca), we plot the learned embeddings for `flood_z
 knitr::include_graphics("images/flood_zone_pca.png")
 ```
 
-### t-Distributed Stochastic Neighbor Embedding
-
-In contrast with PCA, t-SNE is a nonlinear technique. At a high level, it computes a similarity metric, in the form of conditional probabilities based on pairwise distances, among points in $\mathcal{X}$, then look for points $\mathcal{Y}$ in the lower dimensional space which have similarity metric values (for a differently defined metric) that are "close" to those of corresponding pairs of points in the original data.
-
-Let $p_{j|i}$ denote the probability that point $x_i$ picks point $x_j$ as its *neighbor*, if it picks neighbors in proportion to its density under an $n$-dimension Gaussian centered at $x_i$. Formally, we can write $p_{j|i}$ as
-
-\begin{equation}
-p_{j|i} = \frac{\exp(\norm{x_i - x_j}^2 / 2\sigma_i^2)}{\sum_{k\neq i} \exp(-\norm{x_i - x_k}^2 / 2\sigma_i^2)}, (\#eq:pji)
-\end{equation} where $\sigma_i^2$ denotes the variance of the Gaussian associated with $x_i$. The similarity metric for the original space symmetrizes this conditional probability and is defined as
-
-\begin{equation}
-p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}.
-\end{equation}
-
-On the other hand, in the target space, t-SNE assumes the neighbor selection is driven by a Student t-distribution with one degree of freedom, i.e., a Cauchy distribution. The similarity metric for a pair of points in $\mathcal{Y}$ is then defined as the joint probability
-
-
-\begin{equation}
-q_{ij} = \frac{(1 + \norm{y_i - y_j}^2)^{-1}}{\sum_{k \neq l} (1 + \norm{y_k - y_l}^2)^{-1}}.
-\end{equation}
-
-With the similarity metrics defined for each space, we can then state the objective for "closeness" for the sets of points, which is the Kullback--Leibler divergence from Q to P:
-
-
-\begin{equation}
-D_{KL}(P || Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}}. (\#eq:tsne-obj)
-\end{equation}
-
-We now circle back to Equation \@ref(eq:pji) and discuss $\sigma_i$. The variance of the Gaussian is allowed to vary depending on where the point is in the space; specifically, it should reflect the density or sparsness of surrounding points. To train this parameter, t-SNE introduces a hyperparameter, *perplexity*, which is a scalar value set by the user, and is defined as
-
-\begin{equation}
-Perp(P_i) = 2^{H(P_i)},
-\end{equation}
-where $H(P_i)$ denotes the entropy of $P_i$,
-
-
-\begin{equation}
-H(P_i) = -\sum_j p_{j|i}\log_2 p_{j|i},
-\end{equation}
-
-and $P_i$ is the Gaussian parameterized by $x_i$ and $\sigma_i$. During training, t-SNE looks for $P_i$ that have perpelxity corresponding to the user input. Finally, the objective as stated in Equation \@ref(eq:tsne-obj) is differentiable, and is trained via gradient descent.
-
-While t-SNE is a powerful visualization technique, there are a few points the modeler should be mindful of in practice. We refer the reader to @wattenberg2016how for a more thorough discussion, but stress here that the resulting plot can be very sensitive to the perplexity hyperparameter. In addition, for our use case, which is to explore the learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our reasonable range of hyperparameter values need to be adjusted down. In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in Model 3 with various perplexity settings: 2, 3, 5, and 10; the learning rate and the number of steps are fixed at 100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In particular, flood zone D appears in its own cluster, which implies it is far away from other levels in the embedding space, *as seen by the model*. When the perplexity is set to 10 (and beyond), however, we start to lose the geometric properties.
+In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in Model 3 with various perplexity settings: 2, 3, 5, and 10; the learning rate and the number of steps are fixed at 100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In particular, flood zone D appears in its own cluster, which implies it is far away from other levels in the embedding space, *as seen by the model*. When the perplexity is set to 10 (and beyond), however, we start to lose the geometric properties. While t-SNE is a powerful visualization technique, there are a few points the modeler should be mindful of in practice. We refer the reader to @wattenberg2016how for a more thorough discussion, but stress here that the resulting plot can be very sensitive to the perplexity hyperparameter. In addition, for our use case, which is to explore the learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our reasonable range of hyperparameter values are adjusted down. 
 
 ```{r flood-zone-tsne, echo = FALSE, fig.cap="t-SNE plots of learned embeddings of flood zone in Model 4, with various perplexity values. From left to right then top to bottom: 2, 3, 5, and 10.", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_tsne.png")
@@ -716,6 +670,54 @@ knitr::include_graphics("images/total_building_insurance_coverage.pdf")
 ```{r numdisc, echo = FALSE, fig.cap = "Distribution of the Comunity Rating System Discount covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/community_rating_system_discount.pdf")
 ```
+
+# Dimensionality Reduction Techniques {#dim-red}
+
+## Principal Component Analysis
+
+In both approaches, the overarching theme is as follows: we have a collection of points in higher dimensional space, $\mathcal{X} = \{x_1, x_2, \dots, x_n\}$ that we wish to map to some lower dimensional space, typically $\mathbb{R}^2$, obtaining $\mathcal{Y} = \{y_1, y_2, \dots, y_n\}$. PCA performs a linear change of coordinates on the input data so that the variance of the data is maximized along each orthogonal coordinate, also known as *principal component*, successively. Formally, if we denote $\mathbf{X}$ and $\mathbf{Y}$ to be the matrices whose columns are elements of $\mathcal{X}$ and $\mathcal{Y}$, respectively, this can be represented as looking for an orthonormal matrix $\mathbf{P}$ in $\mathbf{Y} = \mathbf{PX}$ such that the covariance matrix of $\mathbf{Y}$, $\frac{1}{n}\mathbf{YY^T}$, is diagonal. Here, the rows of $\mathbf{P}$ are the principal components that define the resulting coordinate system. It turns out that that these principal components are the eigenvectors of the covariance matrix of $\mathbf{X}$, i.e., $\mathbf{C_X} \equiv \frac{1}{n}\mathbf{XX^T}$. In practice, numerical procedures, including R's \texttt{prcomp()} which we use, utilize singular value decomposition (SVD) to compute the eigenvectors.
+
+## t-Distributed Stochastic Neighbor Embedding
+
+In contrast with PCA, t-SNE is a nonlinear technique. At a high level, it computes a similarity metric, in the form of conditional probabilities based on pairwise distances, among points in $\mathcal{X}$, then look for points $\mathcal{Y}$ in the lower dimensional space which have similarity metric values (for a differently defined metric) that are "close" to those of corresponding pairs of points in the original data.
+
+Let $p_{j|i}$ denote the probability that point $x_i$ picks point $x_j$ as its *neighbor*, if it picks neighbors in proportion to its density under an $n$-dimension Gaussian centered at $x_i$. Formally, we can write $p_{j|i}$ as
+
+\begin{equation}
+p_{j|i} = \frac{\exp(\norm{x_i - x_j}^2 / 2\sigma_i^2)}{\sum_{k\neq i} \exp(-\norm{x_i - x_k}^2 / 2\sigma_i^2)}, (\#eq:pji)
+\end{equation} where $\sigma_i^2$ denotes the variance of the Gaussian associated with $x_i$. The similarity metric for the original space symmetrizes this conditional probability and is defined as
+
+\begin{equation}
+p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}.
+\end{equation}
+
+On the other hand, in the target space, t-SNE assumes the neighbor selection is driven by a Student t-distribution with one degree of freedom, i.e., a Cauchy distribution. The similarity metric for a pair of points in $\mathcal{Y}$ is then defined as the joint probability
+
+
+\begin{equation}
+q_{ij} = \frac{(1 + \norm{y_i - y_j}^2)^{-1}}{\sum_{k \neq l} (1 + \norm{y_k - y_l}^2)^{-1}}.
+\end{equation}
+
+With the similarity metrics defined for each space, we can then state the objective for "closeness" for the sets of points, which is the Kullback--Leibler divergence from Q to P:
+
+
+\begin{equation}
+D_{KL}(P || Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}}. (\#eq:tsne-obj)
+\end{equation}
+
+We now circle back to Equation \@ref(eq:pji) and discuss $\sigma_i$. The variance of the Gaussian is allowed to vary depending on where the point is in the space; specifically, it should reflect the density or sparsness of surrounding points. To train this parameter, t-SNE introduces a hyperparameter, *perplexity*, which is a scalar value set by the user, and is defined as
+
+\begin{equation}
+Perp(P_i) = 2^{H(P_i)},
+\end{equation}
+where $H(P_i)$ denotes the entropy of $P_i$,
+
+
+\begin{equation}
+H(P_i) = -\sum_j p_{j|i}\log_2 p_{j|i},
+\end{equation}
+
+and $P_i$ is the Gaussian parameterized by $x_i$ and $\sigma_i$. During training, t-SNE looks for $P_i$ that have perpelxity corresponding to the user input. Finally, the objective as stated in Equation \@ref(eq:tsne-obj) is differentiable, and is trained via gradient descent.
 
 \clearpage
 
