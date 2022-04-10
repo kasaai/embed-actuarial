@@ -29,7 +29,7 @@ input_list[[count+1]] = layer_input(shape = numeric_cols %>% length, dtype = "fl
 
 embeddings = embedding_list %>% layer_concatenate()
 main = list(embeddings, input_list[[count+1]]) %>% layer_concatenate() %>%
-  layer_dense(units = hidden_layer_units, activation = "relu") %>%
+  layer_dense(units = hidden_layer_units, activation = hidden_layer_activations) %>%
   layer_dropout(rate = 0.025)
 
 output = main %>%

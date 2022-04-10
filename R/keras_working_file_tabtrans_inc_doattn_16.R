@@ -10,7 +10,7 @@ get_keras_model_tabtrans = function(hidden_layer_units = 64, embed = 0, for_card
   get_embed_dim = function(cards, embed){
     if (embed == 1) {1}
     else{
-      if(embed ==0) {12}
+      if(embed ==0) {4}
       else {(trunc(cards/2)+1)}
     }
   }
@@ -38,24 +38,24 @@ get_keras_model_tabtrans = function(hidden_layer_units = 64, embed = 0, for_card
   attn_heads = list()
 
   for (i in 1:2){
-    key = all_embeds %>% (layer = layer_dense(units = 16))
-    query = all_embeds %>% (layer = layer_dense(units = 16))
-    value = all_embeds %>% (layer = layer_dense(units = 16))
+    key = all_embeds %>% (layer = layer_dense(units = 8))
+    query = all_embeds %>% (layer = layer_dense(units = 8))
+    value = all_embeds %>% (layer = layer_dense(units = 8))
     attn = layer_attention(list(key, query, value), use_scale = T)%>%
-      layer_dropout(rate = 0.5)
+      layer_dropout(rate = 0.025)
     attn_heads[[i]] = attn
   }
 
-  multi_head_attn = attn_heads %>% layer_concatenate(axis=2) %>% layer_dense(units = 16)
+  multi_head_attn = attn_heads %>% layer_concatenate(axis=2) %>% layer_dense(units = 8)
   stage1 = list(all_embeds, multi_head_attn) %>% layer_add()%>% layer_layer_normalization()
 
-  stage2 = stage1  %>% layer_dense(units = 16*4, activation = "linear") %>%
+  stage2 = stage1  %>% layer_dense(units = 8*4, activation = "linear") %>%
     layer_activation_leaky_relu() %>%
-    layer_dropout(rate = 0.5) %>% layer_dense(units = 16)
+    layer_dropout(rate = 0.025) %>% layer_dense(units = 8)
 
   stage3 = list(stage1, stage2) %>% layer_add() %>% layer_layer_normalization()
 
-  attn_flat = stage3 %>% layer_flatten() %>% layer_dropout(rate = 0.05)
+  attn_flat = stage3 %>% layer_flatten() %>% layer_dropout(rate = 0.025)
 
   main = list(attn_flat, input_list[[count+1]]) %>% layer_concatenate() %>%
     layer_dense(units = 64, activation = "tanh") %>%
@@ -75,7 +75,7 @@ get_keras_model_tabtrans = function(hidden_layer_units = 64, embed = 0, for_card
     optimizer = adam
   )
 
-  lr_call = callback_reduce_lr_on_plateau(monitor = "val_loss", patience = 50, verbose = 1, cooldown = 1,
+  lr_call = callback_reduce_lr_on_plateau(monitor = "val_loss", patience = 10, verbose = 1, cooldown = 1,
                                           factor = 0.9, min_lr = 0.0001)
   mod_save = callback_model_checkpoint(filepath = paste0("c:/r/keras_mod.h5"), verbose = T, save_best_only = T)
 

@@ -300,7 +300,7 @@ The response variable we take from the dataset is "Amount Paid on Building Claim
 
 For our experiments, we set up a 5-fold cross validation scheme that is applied to each of the models we introduce. In Sections \ref{models} and \ref{interpretation}, the tables and figures are based on a single fold of the cross validation split. In Section \ref{training-inference}, we provide the cross-validated performance metrics of each of the models.
 
-\textcolor{blue}{Whereas the main focus of our contribution} is on applications of categorical embeddings in predictive modeling, \textcolor{blue}{we have fine-tuned the neural network models in this (and the next) sections using the same 5-fold cross validation scheme described above, but applied to a separate 100k data point subsample of the FEMA data. The results of this fine-tuning are reported in detail in the appendix. The performance metrics in this, and the next, section are based on the optimal models found through this process. Our aim is thos show that reasonable models utilizing categorical embeddings can be developed quite easily. As we describe the modeling procedure and results, we provide further commentary on recommended practices in practical applications, especially with respect to the neural network models.}
+\textcolor{blue}{Whereas the main focus of our contribution} is on applications of categorical embeddings in predictive modeling, \textcolor{blue}{we have fine-tuned the neural network models in this (and the next) sections using the same 5-fold cross validation scheme described above, but applied to a separate 100k data point subsample of the FEMA data. The results of this fine-tuning are reported in detail in the appendix. The performance metrics in this, and the next, section are based on the optimal models found through this process. Our aim is to show that performant predictive models utilizing categorical embeddings can be developed quite easily, and that these models can be enhanced using suitable architectures utilizing attention mechanisms. As we describe the modeling procedure and results, we provide further commentary on recommended practices in practical applications, especially with respect to the neural network models.}
 
 ## Models {#models}
 
@@ -343,26 +343,26 @@ We take the log of the continuous predictor `building_insurance_coverage`, which
 ```
 one for the intercept, one for each numeric variable, and the numbers of levels minus one (due to dummy coding) for each categorical variable.
 
-In Table \@ref(tab:relativities), we exhibit an exerpt of the relativities, or exponentiated fitted coefficients, of a couple of the categorical variables. Recall that the choice of the log link gives a multiplicative structure, so the interpretation of 1.34 for `occupancy_type = "Non-residential building"` is that, all else equal, the expected loss for a policy for a non-residential building is 1.34 times that of a policy for a single family home, which is the base, or reference, level for the factor.
+In Table \@ref(tab:relativities), we exhibit an exerpt of the relativities, or exponentiated fitted coefficients, of a couple of the categorical variables. Recall that the choice of the log link gives a multiplicative structure, so the interpretation of 1.35 for `occupancy_type = "Non-residential building"` is that, all else equal, the expected loss for a policy for a non-residential building is 1.35 times that of a policy for a single family home, which is the base, or reference, level for the factor.
 
-| variable       | label                                       | relativity |
-|:---------------|:--------------------------------------------|-----------:|
-| occupancy_type | Single family residence                     |       1.00 |
-| occupancy_type | 2 to 4 unit residential buidling            |       1.10 |
-| occupancy_type | Non-residential building                    |       1.34 |
-| occupancy_type | Residential building with more than 4 units |       1.59 |
-| flood_zone     | C                                           |       1.00 |
-| flood_zone     | A                                           |       1.42 |
-| flood_zone     | X                                           |       1.18 |
-| flood_zone     | B                                           |       1.65 |
-| flood_zone     | V                                           |       1.38 |
-| flood_zone     | D                                           |       1.45 |
+|variable       |label                                       | relativity|
+|:--------------|:-------------------------------------------|----------:|
+|occupancy_type |Single family residence                     |       1.00|
+|occupancy_type |2 to 4 unit residential buidling            |       1.11|
+|occupancy_type |Non-residential building                    |       1.35|
+|occupancy_type |Residential building with more than 4 units |       1.57|
+|flood_zone     |C                                           |       1.00|
+|flood_zone     |A                                           |       1.37|
+|flood_zone     |X                                           |       1.15|
+|flood_zone     |B                                           |       1.64|
+|flood_zone     |V                                           |       1.35|
+|flood_zone     |D                                           |       1.50|
 
 : (\#tab:relativities) Excerpt of relativities for Model 1.
 
 ### Model 2: Neural Network with Unidimensional Embeddings
 
-For Model 2, we build a feedforward neural network, whose architecture is shown in Figure \@ref(fig:nn-1). The categorical inputs go through one-dimensional embedding layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which have been normalized in data pre-processing, before being passed through a feedforward layer (with 8 hidden units and ReLU activation) to \textcolor{blue}{finally} obtain a scalar value between 0 and 1, as constrained by a sigmoid output activation. \textcolor{blue}{Some regularization is applied within this network using the dropout technique of} @srivastava2014dropout \textcolor{blue}{and by early-stopping the fitting of the network by selecting the model weights that relate to the lowest estimated MSE score on a 5\% validation sample.} This scalar output represents the proportion of coverage amount that is paid out, which we then multiply by the dollar amount of the coverage amount to obtain our prediction of the claims paid. For optimization, we use the mean squared error (MSE) loss function.
+For Model 2, we build a feedforward neural network, whose architecture is shown in Figure \@ref(fig:nn-1). The categorical inputs go through one-dimensional embedding layers where they are each mapped to a scalar. The embeddings are then concatenated with the numeric predictors, which have been normalized in data pre-processing, before being passed through a feedforward layer (with 8 hidden units and ReLU activation) to \textcolor{blue}{finally} obtain a scalar value between 0 and 1, as constrained by a sigmoid output activation. \textcolor{blue}{Some regularization is applied within this network using the dropout technique of} @srivastava2014dropout \textcolor{blue}{ with a dropout rate of 2.5\% and by early-stopping the fitting of the network by selecting the model weights that relate to the lowest estimated MSE score on a 5\% validation sample.} \textcolor{blue}{Dropout functions by setting some components of the network randomly to zero during each epoch of training. This forces each component of the network to learn a somewhat independent representation of the data, thus helping to avoid overfitting by preventing components of the network from becoming too specialized.} This scalar output represents the proportion of coverage amount that is paid out, which we then multiply by the dollar amount of the coverage amount to obtain our prediction of the claims paid. For optimization, we use the mean squared error (MSE) loss function.
 
 ```{r nn-1, echo = FALSE, fig.cap = "Architecture of Models 2 and 4.", out.width = "80%", fig.align = "center"}
 knitr::include_graphics("images/nn.pdf")
@@ -372,29 +372,29 @@ With a single hidden layer, this architecture is relatively simple; without the 
 
 In Tables \@ref(tab:embeddings-occupancy-type) and \@ref(tab:embeddings-flood-zone), we show the learned embeddings for `occupancy_type` and an excerpt of them for `flood_zone`. While it may be tempting to compare these values to those in Table \@ref(tab:relativities), they represent fundamentally different concepts. It is helpful to think of the embedding values for each variable as a continuous represention of the variable itself, rather than a "coefficient" associated with the variable. Note that it is not straightforward to inspect the embeddings from a table and infer relationships to the response variable, even in a shallow network such as ours, due to nonlinearities within the model. Also note that we now have a way to incorporate the full granularity of the `flood_zone` variable, which is why more levels are shown in Table \@ref(tab:embeddings-flood-zone) as compared to Table \@ref(tab:relativities). In Section \ref{interpretation}, we will discuss techniques to visualize these embeddings.
 
-| level                                       | embedding |
-|:--------------------------------------------|----------:|
-| 2 to 4 unit residential buidling            |      1.46 |
-| Non-residential building                    |     -1.04 |
-| Residential building with more than 4 units |      0.12 |
-| Single family residence                     |      0.36 |
+|level                                       | embedding|
+|:-------------------------------------------|---------:|
+|2 to 4 unit residential buidling            |     -0.20|
+|Non-residential building                    |     -0.02|
+|Residential building with more than 4 units |     -0.03|
+|Single family residence                     |     -0.16|
 
 : (\#tab:embeddings-occupancy-type) Learned embeddings for `occupancy_type` in Model 2.
 
 \newpage
 
-| level | embedding | level | embedding | level | embedding | level | embedding | level | embedding |
-|:------|----------:|:------|----------:|:------|----------:|:------|----------:|:------|----------:|
-| A     |      1.48 | A09   |     -0.48 | A18   |      0.39 | A28   |      1.19 | C     |      1.73 |
-| A00   |     -1.05 | A0B   |      1.47 | A19   |     -1.06 | A30   |     -0.01 | D     |     -1.15 |
-| A01   |     -0.18 | A10   |     -0.25 | A20   |     -1.01 | A99   |     -0.44 | V     |     -1.85 |
-| A02   |     -0.06 | A11   |      0.35 | A21   |      2.08 | AE    |      1.12 | V01   |      0.02 |
-| A03   |     -0.01 | A12   |     -0.38 | A22   |     -0.15 | AH    |      2.19 | V02   |     -1.55 |
-| A04   |      0.05 | A13   |      2.81 | A23   |     -0.76 | AHB   |     -0.68 | V03   |     -0.98 |
-| A05   |      1.30 | A14   |      0.58 | A24   |     -0.87 | AO    |      0.55 | V04   |      1.73 |
-| A06   |     -0.76 | A15   |     -0.91 | A25   |      0.02 | AOB   |      0.08 | V05   |     -1.97 |
-| A07   |     -0.62 | A16   |      0.79 | A26   |      0.00 | AR    |      2.93 | V06   |      0.43 |
-| A08   |     -0.53 | A17   |      1.35 | A27   |      0.80 | B     |      0.33 | V07   |      1.91 |
+|level | embedding|level | embedding|level | embedding|level | embedding|level | embedding|
+|:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|:-----|---------:|
+|A     |     -0.20|A09   |     -0.11|A18   |     -0.26|A30   |     -0.25|D     |     -0.26|
+|A00   |     -0.31|A0B   |     -0.30|A19   |     -0.19|A99   |     -0.11|V     |     -0.44|
+|A01   |     -0.09|A10   |     -0.09|A20   |     -0.26|AE    |     -0.15|V01   |     -0.33|
+|A02   |     -0.05|A11   |     -0.07|A21   |     -0.51|AH    |     -0.18|V02   |     -0.47|
+|A03   |      0.01|A12   |     -0.06|A22   |     -0.21|AHB   |     -0.30|V03   |     -0.32|
+|A04   |     -0.05|A13   |     -0.36|A23   |     -0.31|AO    |     -0.11|V04   |     -0.37|
+|A05   |     -0.17|A14   |     -0.04|A24   |      0.15|AOB   |     -0.09|V05   |     -0.52|
+|A06   |     -0.17|A15   |     -0.26|A25   |     -0.30|AR    |     -0.36|V06   |     -0.02|
+|A07   |     -0.26|A16   |     -0.22|A26   |      0.09|B     |     -0.07|V07   |     -0.16|
+|A08   |     -0.19|A17   |     -0.29|A27   |     -0.07|C     |     -0.20|V08   |     -0.13|
 
 : (\#tab:embeddings-flood-zone) Excerpt of learned embeddings for `flood_zone` in Model 2.
 
@@ -421,18 +421,18 @@ Although, in this particular example, we incorporate one-dimensional embeddings,
 \textcolor{blue}{Since we only have a few parameters in this model, we exhibit the full list of fitted coefficients in Table} \@ref(tab:glm2). \textcolor{blue}{For each categorical variable, there is only one coefficient estimate. This is because each categorical variable has been replaced by a
 single scalar value, so we treat it as if it were any other continuous predictor.}
 
-\textcolor{blue}{One interesting ramification of our choice of embedding dimension of 1 in this example is that we can compute the "implied relativities" of the factor levels in the new GLM. Since each level corresponds to a unique scalar value, we can obtain its contribution to the linear predictor by multiplying by the coefficient estimate of the variable. For example, multiplying the estimate of -0.075 for} `occupancy_type` in Table \@ref(tab:glm2) \textcolor{blue}{by each value in Table} \@ref(tab:embeddings-flood-zone), \textcolor{blue}{we obtain the unnormalized contributions of each level, which can then be exponentiated and normalized with respect to the base level} `Single family residence` \textcolor{blue}{in order to obtain the implied relativities, which could then be compared with the first GLM's output in Table} \@ref(tab:relativities).
+\textcolor{blue}{One interesting ramification of our choice of embedding dimension of 1 in this example is that we can compute the "implied relativities" of the factor levels in the new GLM. Since each level corresponds to a unique scalar value, we can obtain its contribution to the linear predictor by multiplying by the coefficient estimate of the variable. For example, multiplying the estimate of 2 for} `occupancy_type` in Table \@ref(tab:glm2) \textcolor{blue}{by each value in Table} \@ref(tab:embeddings-flood-zone), \textcolor{blue}{we obtain the unnormalized contributions of each level, which can then be exponentiated and normalized with respect to the base level} `Single family residence` \textcolor{blue}{in order to obtain the implied relativities, which could then be compared with the first GLM's output in Table} \@ref(tab:relativities).
 
-| term                                     | estimate |
-|:-----------------------------------------|---------:|
-| (Intercept)                              |    3.371 |
-| total_building_insurance_coverage        |    0.586 |
-| basement_enclosure_crawlspace_type       |    0.597 |
-| number_of_floors_in_the_insured_building |   -0.278 |
-| occupancy_type                           |   -0.075 |
-| flood_zone                               |   -0.007 |
-| primary_residence                        |   -0.062 |
-| community_rating_system_discount         |    0.706 |
+|term        | estimate|
+|:------------------------------------------|--------:|
+|(Intercept)                                |    5.579|
+|total_building_insurance_coverage          |    0.959|
+|basement_enclosure_crawlspace_type         |   -2.243|
+|number_of_floors_in_the_insured_building   |    1.254|
+|occupancy_type                             |    2.000|
+|flood_zone                                 |    2.552|
+|primary_residence                          |    0.552|
+|community_rating_system_discount           |    0.042|
 
 : (\#tab:glm2) Fitted coefficients of Model 3.
 
@@ -440,27 +440,27 @@ single scalar value, so we treat it as if it were any other continuous predictor
 
 Model 4 is architecturally identical to Model 2, with the only difference being the number of embedding dimensions: instead of mapping factor levels to real numbers, we map them to points in Euclidean space, where the dimension of the space is the ceiling of the factor's cardinality divided by two. Formally, in the notation of Section \ref{catdata}, $q_{\mathcal{P}^j}=\ceil{n^j_{\mathcal{P}}/2}$ for variable $X_j$. Following the discussion thus far, we list the learned embeddings for a couple variables in Tables \@ref(tab:nn2-occupancy-type) and \@ref(tab:nn2-flood-zone). Note that, for `flood_zone`, we are only displaying the embedding for *one* level.
 
-| level                                       |    e1 |    e2 |    e3 |
-|:--------------------------------------------|------:|------:|------:|
-| 2 to 4 unit residential buidling            |  0.37 | -1.76 |  1.36 |
-| Non-residential building                    |  0.13 |  1.47 |  1.77 |
-| Residential building with more than 4 units | -1.12 | -0.15 | -1.43 |
-| Single family residence                     |  0.85 |  0.16 | -0.99 |
+|level                                       |    e1|    e2|    e3|
+|:-------------------------------------------|-----:|-----:|-----:|
+|2 to 4 unit residential buidling            |  0.14| -0.01|  0.11|
+|Non-residential building                    | -0.10|  0.06| -0.08|
+|Residential building with more than 4 units | -0.05|  0.20|  0.04|
+|Single family residence                     |  0.09| -0.04|  0.10|
 
 : (\#tab:nn2-occupancy-type) Learned embeddings for `occupancy_type` in Model 4.
 
-| dimension | value  | dimension | value  | dimension | value  | dimension | value  |
-|:----------|:-------|:----------|:-------|:----------|:-------|:----------|:-------|
-| e1        | -0.167 | e11       | -0.810 | e21       | -0.300 | e31       | -0.421 |
-| e2        | -0.363 | e12       | 1.380  | e22       | -0.194 | e32       | 0.594  |
-| e3        | -0.893 | e13       | -0.180 | e23       | -0.320 | e33       | 1.681  |
-| e4        | 0.130  | e14       | -1.612 | e24       | -0.035 | e34       | 1.668  |
-| e5        | -1.588 | e15       | -1.327 | e25       | -1.128 |           |        |
-| e6        | -0.123 | e16       | -0.965 | e26       | 0.168  |           |        |
-| e7        | -0.259 | e17       | -1.356 | e27       | -1.022 |           |        |
-| e8        | 0.324  | e18       | -0.061 | e28       | 1.011  |           |        |
-| e9        | -1.430 | e19       | -0.120 | e29       | -0.843 |           |        |
-| e10       | -1.598 | e20       | -0.488 | e30       | -0.743 |           |        |
+|dimension |value   |dimension |value   |dimension |value   |dimension |value   |
+|:---------|:-------|:---------|:-------|:---------|:-------|:---------|:-------|
+|e1        |0.1605  |e11       |0.0439  |e21       |-0.1335 |e31       |-0.0847 |
+|e2        |0.0783  |e12       |0.1183  |e22       |0.0075  |e32       |0.0115  |
+|e3        |0.0716  |e13       |-0.1515 |e23       |0.1771  |e33       |0.1238  |
+|e4        |-0.0420 |e14       |-0.0875 |e24       |-0.1250 |e34       |-0.1007 |
+|e5        |-0.1034 |e15       |0.0427  |e25       |0.1037  |          |        |
+|e6        |-0.0892 |e16       |-0.0302 |e26       |0.1054  |          |        |
+|e7        |0.1485  |e17       |-0.1293 |e27       |-0.0525 |          |        |
+|e8        |-0.0633 |e18       |0.1022  |e28       |-0.0650 |          |        |
+|e9        |0.0680  |e19       |0.1327  |e29       |-0.0313 |          |        |
+|e10       |-0.1160 |e20       |-0.0708 |e30       |0.0709  |          |        |
 
 : (\#tab:nn2-flood-zone) Learned embeddings for level `"A00"` of variable `flood_zone` in Model 4.
 
@@ -480,15 +480,15 @@ knitr::include_graphics("images/occupancy_type_embed.png")
 knitr::include_graphics("images/flood_zone_embed.png")
 ```
 
-For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than two dimensions. The standard approaches for this are principal component analysis (PCA; @shlens2014tutorial) and t-distributed stochastic neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate. For a technical review of these methods, refer to Appendix \\ref{dim-red].
+For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than two dimensions. The standard approaches for this are principal component analysis (PCA; @shlens2014tutorial) and t-distributed stochastic neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate. For a technical review of these methods, refer to Appendix \\ref{dim-red}.
 
-In Figure \@ref(fig:flood-zone-pca), we plot the learned embeddings for `flood_zone` in Model 3 on the coordinate system defined by the first two principle components. In our case, however, we are not able to identify discernable clusters in the plot. From inspecting the matrix decomposition results, we see that the cumulative proportion of variance for the first two principal components are just 0.18, which may suggest that perhaps PCA is not the most appropriate dimensionality reduction technique in this case.
+In Figure \@ref(fig:flood-zone-pca), we plot the learned embeddings for `flood_zone` in Model 3 on the coordinate system defined by the first two principle components. In our case, however, we are not able to identify discernable clusters in the plot. From inspecting the matrix decomposition results, we see that the cumulative proportion of variance for the first two principal components are just \textcolor{blue}{0.38, which is a relatively low proportion,} suggesting that perhaps PCA is not the most appropriate dimensionality reduction technique in this case.
 
 ```{r flood-zone-pca, echo = FALSE, fig.cap="First two principal components of learned embeddings of flood zone in Model 4.", out.width = "50%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_pca.png")
 ```
 
-In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in Model 3 with various perplexity settings: 2, 3, 5, and 10; the learning rate and the number of steps are fixed at 100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In particular, flood zone D appears in its own cluster, which implies it is far away from other levels in the embedding space, *as seen by the model*. When the perplexity is set to 10 (and beyond), however, we start to lose the geometric properties. While t-SNE is a powerful visualization technique, there are a few points the modeler should be mindful of in practice. We refer the reader to @wattenberg2016how for a more thorough discussion, but stress here that the resulting plot can be very sensitive to the perplexity hyperparameter. In addition, for our use case, which is to explore the learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our reasonable range of hyperparameter values are adjusted down.
+In Figures \@ref(fig:flood-zone-tsne), we display the t-SNE of the learned embeddings for `flood_zone` in Model 3 with various perplexity settings: 2, 3, 5, and 10; the learning rate and the number of steps are fixed at 100 and 10,000, respectively, for all plots. In the first three plots, we can see the semblance of clusters forming. In particular, flood zone \textcolor{blue}{B appears at the extreme of the plot, which implies it is relatively} far away from other levels in the embedding space, *as seen by the model*. \textcolor{blue}{We also observe that flood zones C and X lie close to each other, regardless of the perplexity parameter, and a similar observation can be made for flood zones B and D. Using these two sets of points as anchors within these plots, we can finally observe that the learned embeddings for flood zones A and V appear to be divided into two main groups.} While t-SNE is a powerful visualization technique, there are a few points the modeler should be mindful of in practice. We refer the reader to @wattenberg2016how for a more thorough discussion, but stress here that the resulting plot can be very sensitive to the perplexity hyperparameter. In addition, for our use case, which is to explore the learned embeddings, we have fewer data points than most other applications in the literature. Accordingly, our reasonable range of hyperparameter values are adjusted down.
 
 ```{r flood-zone-tsne, echo = FALSE, fig.cap="t-SNE plots of learned embeddings of flood zone in Model 4, with various perplexity values. From left to right then top to bottom: 2, 3, 5, and 10.", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/flood_zone_tsne.png")
@@ -496,23 +496,23 @@ knitr::include_graphics("images/flood_zone_tsne.png")
 
 ## Training and Inference {#training-inference}
 
-For the GLMs, Models 1 and 3, we follow the standard optimization procedure using iteratively reweighted least squares (IWLS) without regularization. For the neural networks, Models 2 and 4, we utilize the \texttt{Adam} optimizer [@Kingma2014] with a learning rate of 0.01 and a minibatch size of 1000. We split the training set into analysis and assessment sets, containing 80% and 20% of the rows, respectively. We train on the analysis set for a maximum of 15 epochs, and stop early if the loss on the assessment set does not improve for 5 epochs.
+For the GLMs, Models 1 and 3, we follow the standard optimization procedure using iteratively reweighted least squares (IWLS) without regularization. For the neural networks, Models 2 and 4, we utilize the \texttt{Adam} optimizer [@Kingma2014] with a learning rate of \textcolor{blue}{0.001 and a minibatch size of 1024. We split the training set into analysis and assessment sets, containing} 80% and 20% \textcolor{blue}{of the rows, respectively, and further select a} 5% \textcolor{blue}{sample of the training set as a validation set to estimate the out of sample performance of each model. We train on the analysis set for a maximum of 150 epochs, and select the best model from the 150 epochs as measured by the validation. Finally, as mentioned above, in addition to this form of early stopping, we also apply the sropout technique with a rate of dropout of} 2.5\%.
 
 During inference, or scoring, care must be taken to accommodate the categorical levels that are unseen during training. While we allow for an extra key in the embedding dictionary, the initial weights are not updated during training, which could lead to nonsensical predictions in the validation or test sets. To circumvent this issue, before applying the trained model but after the final optimization epoch, we update the weights for the unseen levels manually. In practice, a common approach is to take an average value of some sort of the weights of the other levels. In our case, we take the median (if there are multiple, the lower of the two), but a mean, mean weighted by frequency of observations, or trimmed mean could be used.
 
 In Table \@ref(tab:cv-results), we exhibit the cross-validated performance metrics of each of the models. We report both the root mean squared error (RMSE) and the mean absolute error (MAE); we note that these are just two of many potential metrics to use, and are so chosen for their interpretability and prevalence in the literature for comparing different types of models. Recall that, between the two metrics, RMSE penalizes large mispredictions than MAE. Also, in the optimization process, GLM with a gamma distribution optimizes the deviance, rather than MSE directly.
 
-We see that the neural networks generally outperform the GLMs; however, what is more interesting is that using learned embeddings in place of categorical levels improves the GLM, at least from the RMSE perspective.
+We see that the neural networks \textcolor{blue}{outperform the GLMs in all cases, as would be expected; however, what is more interesting is that using learned embeddings in place of categorical levels improves the GLM, at least from the RMSE perspective. This indicates that using neural networks to derive embeddings for categorical variables for subsequent use in GLMs is a strategy that should be considered when building GLM models for ratemaking.}
 
-While linear regression (i.e., the specific case of GLM with a gaussian distribution and identity link function) is not commonly used for severity modeling, we add it into the mix as a benchmark, a practice we recommend in order to check reasonableness of other models' results. Since it is possible for a linear regression to output negative values, we cap the predictions below by 0.01 during scoring. Somewhat surprisingly, in the problem we are considering, it performs similarly to the more complex neural network models in the RMSE metric (which it optimizes for, as the unit deviance of the normal distribution correspond to MSE.) On the other hand, the performance of the linear model is quite significantly worse on the MAE metric. Of course, this is not to discredit neural networks or GLMs, as the experiments are performed without extensive hyperparameter tuning or feature engineering.
+While linear regression (i.e., the specific case of GLM with a gaussian distribution and identity link function) is not commonly used for severity modeling, we add it into the mix as a benchmark, a practice we recommend in order to check reasonableness of other models' results. Since it is possible for a linear regression to output negative values, we cap the predictions below by 0.01 during scoring. Somewhat surprisingly, in the problem we are considering, it performs \textcolor{blue}{slightly worse than the more complex neural network models in the RMSE metric but significantly better than the other GLM models. This may be because this model optimizes for the RMSE metric, as the unit deviance of the normal distribution corresponds to MSE.} On the other hand, the performance of the linear model is quite significantly worse on the MAE metric. \textcolor{blue}{Another observation is that Model 4 performs slighlty worse than Model 2, perhaps as a result of some overfitting resulting from the multidimensional embeddings in Model 4. If further tuning were to be applied, it would be sensible to apply extra regularization to Model 4, however, we refrain from doing so here.}
 
-| Model                                                                         |   RMSE |    MAE |
-|:------------------------------------------------------------------------------|-------:|-------:|
-| Model 1: GLM (gamma/log link)                                                 | 65,138 | 38,367 |
-| Model 2: MLP with 1-dimensional embeddings                                    | 60,979 | 37,605 |
-| Model 3: GLM (gamma/log link), categorical variables replaced with embeddings | 63,170 | 38,360 |
-| Model 4: MLP with multidimensional embeddings                                 | 60,973 | 37,574 |
-| Linear regression, predictions capped below at 0.01                           | 60,879 | 38,431 |
+| Model                                                                             | RMSE             | MAE           |
+|-----------------------------------------------------------------------------------|------------------|---------------|
+|  Model 1: GLM (gamma/log link)                                                    |          65 676  |       38 431  |
+|  Model 2: MLP with 1-dimensional   embeddings                                     |          60 214  |       37 392  |
+|  Model 3: GLM (gamma/log link), categorical   variables replaced with embeddings  |          63 733  |       37 987  |
+|  Model 4: MLP with multidimensional   embeddings                                  |          60 772  |       37 587  |
+|  Linear regression, predictions capped below   at 0.01                            |          61 285  |       38 962  |
 
 : (\#tab:cv-results) Cross validation results.
 
@@ -563,19 +563,19 @@ The final model we consider in this subsection is the TabNet architecture. In Ta
 
 ## Training and Inference {#training-inference-attn}
 
-We follow a similar training setup for the three attention based models, to the neural networks discussed in the previous section. For Models 5 and 6, we utilize the \texttt{Adam} optimizer as before, however, due to the increased complexity of the models in this section, we use learning rate of 0.001 (compared to 0.01 for the simpler models). Reflecting this reduced learning rate, we train on the analysis set for a maximum of 150 epochs, and select the best model based on the lowest loss achieved on the assessment. Moreover, since these models are significantly more complex than those tested in the previous section, we also add some minimal regularization using dropout [@srivastava2014dropout] to the attention layers and the last layer of the network, to prevent overfitting. Dropout functions by setting some components of the network randomly to zero during each epoch of training. This forces each component of the network to learn a somewhat independent representation of the data, thus helping to avoid overfitting by preventing components of the network from becoming too specialized. In this section, we drop out components with a probability of 2.5%. A final detail is that, for both of these models, we use an embedding dimension of size 16 for each of the categorical covariates, since the attention mechanism requires that the embeddings be of a common length. For the TabTransformer model, we use a row embedding of dimension 4.
+We follow a similar training setup for the three attention based models, to the neural networks discussed in the previous section. For Models 5 and 6, we utilize the \texttt{Adam} optimizer as before \textcolor{blue}{and similar to the model in the previous section, we use learning rate of 0.001}. \textcolor{blue}{Similarly,} we train on the analysis set for a maximum of 150 epochs, and select the best model based on the lowest loss achieved on the assessment. Moreover, since these models are significantly more complex than those tested in the previous section, we also add \textcolor{blue}{extra} regularization using dropout  to the attention layers, to prevent overfitting.In this section, we drop out components with a probability of 2.5%. A final detail is that, for both of these models, we use an embedding dimension of size 16 for each of the categorical covariates, since the attention mechanism requires that the embeddings be of a common length. For the TabTransformer model, we use a row embedding of dimension 4.
 
 For Model 7, we use the suggested training setup that utilizes the \texttt{Adam} optimizer with a learning rate of 0.02, and train for 15 epochs (since longer training times did not lead to improved performance).
 
-In Table \@ref(tab:cv-results-attn), we show the cross-validated performance metrics of each of the models, as well as the two best performing models from the previous section. As before, we report both the root mean squared error (RMSE) and the mean absolute error (MAE). The results show that Model 5, which simply adds attention to Model 4, outperforms Model 4 on both the RMSE and MAE metrics. Thus, there is some room to argue that for tabular data modeling that uses embeddings for categorical data, the use of attention within models should be considered. The TabNet architecture performs poorly, perhaps due to insufficient hyperparameter tuning, but indicating that *out of the box*, TabNet does not appear to work well for this modeling task. Finally, the TabTransformer model shows the best performance of all models considered in this research, beating the other models by a significant margin on both the RMSE and MAE metrics.
+In Table \@ref(tab:cv-results-attn), we show the cross-validated performance metrics of each of the models, as well as the two best performing models from the previous section. As before, we report both the root mean squared error (RMSE) and the mean absolute error (MAE). The results show that Model 5, which simply adds attention to Model 4, outperforms Model 4 on both the RMSE and MAE metrics. Thus, there is some room to argue that for tabular data modeling that uses embeddings for categorical data, the use of attention within models should be considered. The TabNet architecture performs poorly, perhaps due to insufficient hyperparameter tuning, but indicating that *out of the box*, TabNet does not appear to work well for this modeling task. Finally, the TabTransformer model shows the best performance of all models considered in this research, beating the other models by a significant margin on both the RMSE and MAE metrics. \textcolor{blue}{We conclude that the more complex Transformer style attention applied in the TabTransformer model appears to lead to a relatively significant improvement in performance over all other models considered here.}
 
-| Model                                               |   RMSE |    MAE |
-|:----------------------------------------------------|-------:|-------:|
-| Model 4: MLP with multidimensional embeddings       | 60,973 | 37,574 |
-| Model 5: Simple Attention                           | 60,601 | 36,739 |
-| \textcolor{blue}{Model 6: TabTransformer}           | 59,900 | 36,343 |
-| \textcolor{blue}{Model 7: TabNet}                   | 62,938 | 38,386 |
-| Linear regression, predictions capped below at 0.01 | 60,879 | 38,431 |
+| Model                                                                            | RMSE             | MAE              |
+|----------------------------------------------------------------------------------|------------------|------------------|
+| Model 2: MLP with 1-dimensional   embeddings                                     |          60 214  |          37 392  |
+| Model 5: Simple Attention                                                        |          60 367  |          37 527  |
+| Model 6: TabTransformer                                                          |          59 908  |          36 501  |
+| Model 7: TabNet                                                                  |          63 619  |          39 668  |
+| Linear regression, predictions capped below at 0.01                              |          61 285  |          38 962  |
 
 : (\#tab:cv-results-attn) Cross validation results for Models 5-7.
 
@@ -599,10 +599,10 @@ knitr::include_graphics("images/emb_vs_cembd_exp.pdf")
 
 To investigate the predictive value added by the contextual embeddings, a simple Gamma GLM was fit to these 10 000 observations, with the goal of predicting the claim amount based only on either the embeddings or the contextual embeddings. As shown in Table \@ref(tab:emd-vs-cembd), the performance of the latter model, as indicated by the RMSE and MAE metrics is better, in other words, the contextual embeddings that incorporate information across all of the categorical variables are better predictors of claim severity compared with the embeddings.
 
-| Embedding Type       |     RMSE |      MAE |
-|:---------------------|---------:|---------:|
-| Embedding            | 62596.84 | 40323.82 |
-| Contextual embedding | 62027.85 | 39450.45 |
+|Embedding Type       |  RMSE|   MAE|
+|:--------------------|------:|------:|
+|Embedding            | 68 444| 41 557|
+|Contextual embedding | 67 905| 40 559|
 
 : (\#tab:emd-vs-cembd) RMSE and MAE for GLMs predicting claim severity, embeddings compared with contextual embeddings.
 
@@ -659,27 +659,50 @@ knitr::include_graphics("images/total_building_insurance_coverage.pdf")
 ```{r numdisc, echo = FALSE, fig.cap = "Distribution of the Comunity Rating System Discount covariate", out.width = "60%", fig.align = "center"}
 knitr::include_graphics("images/community_rating_system_discount.pdf")
 ```
+
 # Finetuning the Neural Network Models
-Here we describe how the neural network models presented in Sections 4 and 5 above were fine-tuned. 
+
+Here we describe how the neural network models presented in Sections 4 and 5 above were fine-tuned.
 
 ## Models in Section 4
+
+```{=tex}
 \textcolor{blue}{
 As noted before, a different 100k subsample of the NFIP dataset was produced for this purpose, and a 5-fold cross-validation scheme was implemented using this data. Two main hyperparameters were tuned for each of Model 2 and Model 4. Two different activation functions (the ReLu and hyperbolic tangent activation functions) and 5 different widths of the hidden layers (8, 16, 32, 64, 128) were tested. The following table shows these results for each of Model 2 and Model 4.}
+```
+\tiny
 
-|  | ReLU/8 | ReLu/16 | ReLu/32 | ReLu/64 | ReLu/128 | tanh/8 | tanh/16 | tanh/32 | tanh/64 | tanh/128 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Model 2 - RMSE |          60 988  |          60 561  |          60 125  |          60 147  |          59 918  |          61 728  |          60 506  |          60 130  |          59 893  |          60 065  |
-| Model 4 - RMSE |          60 535  |          60 724  |          60 311  |          60 191  |          60 114  |          60 521  |          60 658  |          60 279  |          59 892  |          59 987  |
-| Model 2 - MAE |          36 604  |          36 791  |          36 936  |          37 140  |          36 816  |          37 206  |          36 759  |          36 921  |          37 103  |          37 177  |
-| Model 4 - MAE |          36 828  |          36 824  |          36 780  |          37 054  |          36 672  |          36 528  |          36 725  |          36 483  |          36 766  |          36 394  |
+|                | ReLU/8 | ReLu/16 | ReLu/32 | ReLu/64 | ReLu/128 | tanh/8 | tanh/16 | tanh/32 | tanh/64 | tanh/128 |
+|----------------|--------|---------|---------|---------|----------|--------|---------|---------|---------|----------|
+| Model 2 - RMSE | 60 988 | 60 561  | 60 125  | 60 147  | 59 918   | 61 728 | 60 506  | 60 130  | 59 893  | 60 065   |
+| Model 4 - RMSE | 60 535 | 60 724  | 60 311  | 60 191  | 60 114   | 60 521 | 60 658  | 60 279  | 59 892  | 59 987   |
+| Model 2 - MAE  | 36 604 | 36 791  | 36 936  | 37 140  | 36 816   | 37 206 | 36 759  | 36 921  | 37 103  | 37 177   |
+| Model 4 - MAE  | 36 828 | 36 824  | 36 780  | 37 054  | 36 672   | 36 528 | 36 725  | 36 483  | 36 766  | 36 394   |
 : Results of fine-tuning models in Section 4.
+
+\normalsize
 
 \textcolor{blue}{It can be observed that the lowest RMSE values are produced using the tanh activation function with a hidden layer width 64 neurons.}
 
+\newpage
+
 ## Models in Section 5
 
-\textcolor{blue}{Models 5 and 6 add an attention-based mechanism to derive contextual embeddings to the models in Section 4. To find optimal hyperparameters, the best performing variation of Model 4 (tanh/64) was taken as a baseline, and the attention mechanisms described for Models 5 and 6 were added to this baseline. Since the performance of the models would ideally improve as a result of adding the attention mechanisms, and, indeed, we see this is the case in the following table, we do not attempt to fine-tune Models 5 and 6 any further.}
+\textcolor{blue}{Models 5 and 6 add an attention-based mechanism to derive contextual embeddings to the models in Section 4. To find optimal hyperparameters, the best performing variation of Model 4 (tanh/64) was taken as a baseline, and the attention mechanisms described for Models 5 and 6 were then added to this baseline model. It was found that the performance of Model 6 improved as a result of adding the Tab Transformer attention mechanism, and, thus, no further fintetuning was performed on this model. However, despite several attempts at optimizing the hyperparameters of Models 5 (which included modifying the size of the embeddings and the amount of dropout applied), significant improvements beyond those shown in the table below were not achieved.}
 
+\tiny
+
+|                | Scores |
+|----------------|--------|
+| Model 5 - RMSE | 60 382 |
+| Model 5 - MAE  | 37 426 |
+| Model 6 - RMSE | 59 821 |
+| Model 6 - MAE  | 36 474 |
+: Results of fine-tuning models in Section 5.
+
+\normalsize
+
+\textcolor{blue}{Finally, several of the recommended default hyperparamter settings for the TabNet model were tried, however, significant improvements over the results shown in Section 5 were not achieved.}
 
 # Dimensionality Reduction Techniques {#dim-red}
 
