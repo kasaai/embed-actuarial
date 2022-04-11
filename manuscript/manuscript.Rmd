@@ -480,7 +480,7 @@ knitr::include_graphics("images/occupancy_type_embed.png")
 knitr::include_graphics("images/flood_zone_embed.png")
 ```
 
-For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than two dimensions. The standard approaches for this are principal component analysis (PCA; @shlens2014tutorial) and t-distributed stochastic neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate. For a technical review of these methods, refer to Appendix \\ref{dim-red}.
+For Model 4, the neural network with multi-dimensional embeddings, we would need to treat the learned values before we can plot them. Specifically, we need to reduce the dimension of the data to 2D for embeddings with more than two dimensions. The standard approaches for this are principal component analysis (PCA; @shlens2014tutorial) and t-distributed stochastic neighbor embedding (t-SNE; @Maaten2008a), both of which we illustrate. For a technical review of these methods, refer to Appendix \ref{dim-red}.
 
 In Figure \@ref(fig:flood-zone-pca), we plot the learned embeddings for `flood_zone` in Model 3 on the coordinate system defined by the first two principle components. In our case, however, we are not able to identify discernable clusters in the plot. From inspecting the matrix decomposition results, we see that the cumulative proportion of variance for the first two principal components are just \textcolor{blue}{0.38, which is a relatively low proportion,} suggesting that perhaps PCA is not the most appropriate dimensionality reduction technique in this case.
 
@@ -508,11 +508,11 @@ While linear regression (i.e., the specific case of GLM with a gaussian distribu
 
 | Model                                                                             | RMSE             | MAE           |
 |-----------------------------------------------------------------------------------|------------------|---------------|
-|  Model 1: GLM (gamma/log link)                                                    |          65 676  |       38 431  |
-|  Model 2: MLP with 1-dimensional   embeddings                                     |          60 214  |       37 392  |
-|  Model 3: GLM (gamma/log link), categorical   variables replaced with embeddings  |          63 733  |       37 987  |
-|  Model 4: MLP with multidimensional   embeddings                                  |          60 772  |       37 587  |
-|  Linear regression, predictions capped below   at 0.01                            |          61 285  |       38 962  |
+|  Model 1: GLM (gamma/log link)                                                    |          65,676  |       38,431  |
+|  Model 2: MLP with 1-dimensional   embeddings                                     |          60,214  |       37,392  |
+|  Model 3: GLM (gamma/log link), categorical   variables replaced with embeddings  |          63,733  |       37,987  |
+|  Model 4: MLP with multidimensional   embeddings                                  |          60,772  |       37,587  |
+|  Linear regression, predictions capped below   at 0.01                            |          61,285  |       38,962  |
 
 : (\#tab:cv-results) Cross validation results.
 
@@ -571,11 +571,11 @@ In Table \@ref(tab:cv-results-attn), we show the cross-validated performance met
 
 | Model                                                                            | RMSE             | MAE              |
 |----------------------------------------------------------------------------------|------------------|------------------|
-| Model 2: MLP with 1-dimensional   embeddings                                     |          60 214  |          37 392  |
-| Model 5: Simple Attention                                                        |          60 367  |          37 527  |
-| Model 6: TabTransformer                                                          |          59 908  |          36 501  |
-| Model 7: TabNet                                                                  |          63 619  |          39 668  |
-| Linear regression, predictions capped below at 0.01                              |          61 285  |          38 962  |
+| Model 2: MLP with 1-dimensional   embeddings                                     |          60,214  |          37,392  |
+| Model 5: Simple Attention                                                        |          60,367  |          37,527  |
+| Model 6: TabTransformer                                                          |          59,908  |          36,501  |
+| Model 7: TabNet                                                                  |          63,619  |          39,668  |
+| Linear regression, predictions capped below at 0.01                              |          61,285  |          38,962  |
 
 : (\#tab:cv-results-attn) Cross validation results for Models 5-7.
 
@@ -601,8 +601,8 @@ To investigate the predictive value added by the contextual embeddings, a simple
 
 |Embedding Type       |  RMSE|   MAE|
 |:--------------------|------:|------:|
-|Embedding            | 68 444| 41 557|
-|Contextual embedding | 67 905| 40 559|
+|Embedding            | 68,444| 41,557|
+|Contextual embedding | 67,905| 40,559|
 
 : (\#tab:emd-vs-cembd) RMSE and MAE for GLMs predicting claim severity, embeddings compared with contextual embeddings.
 
@@ -660,7 +660,7 @@ knitr::include_graphics("images/total_building_insurance_coverage.pdf")
 knitr::include_graphics("images/community_rating_system_discount.pdf")
 ```
 
-# Finetuning the Neural Network Models
+# Fine-tuning the Neural Network Models
 
 Here we describe how the neural network models presented in Sections 4 and 5 above were fine-tuned.
 
@@ -674,10 +674,10 @@ As noted before, a different 100k subsample of the NFIP dataset was produced for
 
 |                | ReLU/8 | ReLu/16 | ReLu/32 | ReLu/64 | ReLu/128 | tanh/8 | tanh/16 | tanh/32 | tanh/64 | tanh/128 |
 |----------------|--------|---------|---------|---------|----------|--------|---------|---------|---------|----------|
-| Model 2 - RMSE | 60 988 | 60 561  | 60 125  | 60 147  | 59 918   | 61 728 | 60 506  | 60 130  | 59 893  | 60 065   |
-| Model 4 - RMSE | 60 535 | 60 724  | 60 311  | 60 191  | 60 114   | 60 521 | 60 658  | 60 279  | 59 892  | 59 987   |
-| Model 2 - MAE  | 36 604 | 36 791  | 36 936  | 37 140  | 36 816   | 37 206 | 36 759  | 36 921  | 37 103  | 37 177   |
-| Model 4 - MAE  | 36 828 | 36 824  | 36 780  | 37 054  | 36 672   | 36 528 | 36 725  | 36 483  | 36 766  | 36 394   |
+| Model 2 - RMSE | 60,988 | 60,561  | 60,125  | 60,147  | 59,918   | 61,728 | 60,506  | 60,130  | 59,893  | 60,065   |
+| Model 4 - RMSE | 60,535 | 60,724  | 60,311  | 60,191  | 60,114   | 60,521 | 60,658  | 60,279  | 59,892  | 59,987   |
+| Model 2 - MAE  | 36,604 | 36,791  | 36,936  | 37,140  | 36,816   | 37,206 | 36,759  | 36,921  | 37,103  | 37,177   |
+| Model 4 - MAE  | 36,828 | 36,824  | 36,780  | 37,054  | 36,672   | 36,528 | 36,725  | 36,483  | 36,766  | 36,394   |
 : Results of fine-tuning models in Section 4.
 
 \normalsize
@@ -688,16 +688,16 @@ As noted before, a different 100k subsample of the NFIP dataset was produced for
 
 ## Models in Section 5
 
-\textcolor{blue}{Models 5 and 6 add an attention-based mechanism to derive contextual embeddings to the models in Section 4. To find optimal hyperparameters, the best performing variation of Model 4 (tanh/64) was taken as a baseline, and the attention mechanisms described for Models 5 and 6 were then added to this baseline model. It was found that the performance of Model 6 improved as a result of adding the Tab Transformer attention mechanism, and, thus, no further fintetuning was performed on this model. However, despite several attempts at optimizing the hyperparameters of Models 5 (which included modifying the size of the embeddings and the amount of dropout applied), significant improvements beyond those shown in the table below were not achieved.}
+\textcolor{blue}{Models 5 and 6 add an attention-based mechanism to derive contextual embeddings to the models in Section 4. To find optimal hyperparameters, the best performing variation of Model 4 (tanh/64) was taken as a baseline, and the attention mechanisms described for Models 5 and 6 were then added to this baseline model. It was found that the performance of Model 6 improved as a result of adding the TabTransformer attention mechanism, and, thus, no further fintetuning was performed on this model. However, despite several attempts at optimizing the hyperparameters of Models 5 (which included modifying the size of the embeddings and the amount of dropout applied), significant improvements beyond those shown in the table below were not achieved.}
 
 \tiny
 
 |                | Scores |
 |----------------|--------|
-| Model 5 - RMSE | 60 382 |
-| Model 5 - MAE  | 37 426 |
-| Model 6 - RMSE | 59 821 |
-| Model 6 - MAE  | 36 474 |
+| Model 5 - RMSE | 60,382 |
+| Model 5 - MAE  | 37,426 |
+| Model 6 - RMSE | 59,821 |
+| Model 6 - MAE  | 36,474 |
 : Results of fine-tuning models in Section 5.
 
 \normalsize
